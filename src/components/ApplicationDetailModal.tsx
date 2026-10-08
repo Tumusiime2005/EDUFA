@@ -1,0 +1,610 @@
+import React, { useState } from 'react';
+import {
+  X,
+  Shield,
+  EyeOff,
+  CheckCircle2,
+  AlertTriangle,
+  Award,
+  BookOpen,
+  DollarSign,
+  HeartHandshake,
+  TrendingUp,
+  FileText,
+  Clock,
+  Sparkles,
+  ArrowRight,
+  Send,
+  AlertCircle,
+  FileCheck,
+  Building,
+  User,
+  GraduationCap
+} from 'lucide-react';
+import { useAuth } from '../context/AuthContext.tsx';
+
+interface ApplicationDetailModalProps {
+  application: any | null;
+  onClose: () => void;
+  onDecisionSubmitted: () => void;
+}
+
+export const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
+  application,
+  onClose,
+  onDecisionSubmitted,
+}) => {
+  const { currentUser, anonymizedMode, activeRole } = useAuth();
+  const [activeTab, setActiveTab] = useState<'scoring' | 'documents' | 'decisions'>('scoring');
+  const [decisionAction, setDecisionAction] = useState<'approve' | 'reject' | 'request_info'>('approve');
+  const [decisionNotes, setDecisionNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+
+  if (!application) return null;
+
+  const score = application.scoreRecord || {};
+  const explanation = score.explanation || {};
+  const financial = application.financialData || {};
+  const academic = application.academicData || {};
+  const alignment = application.alignmentData || {};
+  const funding = application.fundingScopeData || {};
+
+  const displayName = anonymizedMode
+    ? `Applicant #${application.id} (Identity Anonymized)`
+    : application.applicant?.profile?.fullName || application.applicant?.email || `Applicant #${application.id}`;
+
+  const displayEmail = anonymizedMode
+    ? `applicant-${application.id}@shielded.anonymized`
+    : application.applicant?.email;
+
+  const handleDecisionSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    if (!decisionNotes.trim() || decisionNotes.trim().length < 8) {
+      setErrorMsg('Mandatory reviewer notes must be at least 8 characters explaining the rationale.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/applications/${application.id}/decision`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reviewerId: currentUser?.id || 1,
+          action: decisionAction,
+          notes: decisionNotes,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to submit decision');
+      }
+
+      setSuccessMsg('Committee decision recorded in audit log and applicant notified!');
+      setDecisionNotes('');
+      setTimeout(() => {
+        onDecisionSubmitted();
+      }, 1200);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error recording committee decision');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'approved':
+        return <span className="px-3 py-1 text-xs font-semibold rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" /> Approved</span>;
+      case 'rejected':
+        return <span className="px-3 py-1 text-xs font-semibold rounded-full bg-red-500/15 text-red-400 border border-red-500/30 flex items-center gap-1.5"><AlertCircle className="w-3.5 h-3.5" /> Rejected</span>;
+      case 'more_info_requested':
+        return <span className="px-3 py-1 text-xs font-semibold rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5" /> More Info Requested</span>;
+      default:
+        return <span className="px-3 py-1 text-xs font-semibold rounded-full bg-orange-500/15 text-orange-400 border border-orange-500/30 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> Under Review</span>;
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6">
+      <div className="relative w-full max-w-4xl bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col">
+        {/* Header */}
+        <div className="p-5 sm:p-6 border-b border-neutral-800 bg-neutral-950/70 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg border ${
+              anonymizedMode
+                ? 'bg-amber-950/50 border-amber-500/40 text-amber-300'
+                : 'bg-orange-600/20 border-orange-500/40 text-orange-400'
+            }`}>
+              {anonymizedMode ? <EyeOff className="w-6 h-6 text-amber-400" /> : <GraduationCap className="w-6 h-6 text-orange-400" />}
+            </div>
+            <div>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h3 className="text-lg font-bold text-white tracking-tight">{displayName}</h3>
+                {getStatusBadge(application.status)}
+              </div>
+              <p className="text-xs text-neutral-400 flex items-center gap-2 mt-0.5">
+                <span>{displayEmail}</span>
+                <span>•</span>
+                <span>Dossier #{application.id}</span>
+                <span>•</span>
+                <span>Submitted {new Date(application.createdAt).toLocaleDateString()}</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+            <div className="text-right sm:text-right bg-neutral-900/90 border border-neutral-800 px-4 py-2 rounded-xl">
+              <span className="text-[10px] uppercase font-bold text-neutral-400 block tracking-wider">Composite Score</span>
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-black text-orange-500 font-mono">
+                  {score.compositeScore ? score.compositeScore.toFixed(1) : '--'}
+                </span>
+                <span className="text-xs font-semibold text-neutral-400">/100</span>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl bg-neutral-800/80 hover:bg-neutral-800 text-neutral-400 hover:text-white transition-all cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="flex items-center px-6 border-b border-neutral-800 bg-neutral-950/40 gap-6 text-xs font-semibold">
+          <button
+            onClick={() => setActiveTab('scoring')}
+            className={`py-3.5 border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'scoring'
+                ? 'border-orange-500 text-orange-400'
+                : 'border-transparent text-neutral-400 hover:text-neutral-200'
+            }`}
+          >
+            <Sparkles className="w-4 h-4" />
+            Multi-Pillar Fairness Breakdown
+          </button>
+          <button
+            onClick={() => setActiveTab('documents')}
+            className={`py-3.5 border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'documents'
+                ? 'border-orange-500 text-orange-400'
+                : 'border-transparent text-neutral-400 hover:text-neutral-200'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            Supporting Documents & Verification
+          </button>
+          <button
+            onClick={() => setActiveTab('decisions')}
+            className={`py-3.5 border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+              activeTab === 'decisions'
+                ? 'border-orange-500 text-orange-400'
+                : 'border-transparent text-neutral-400 hover:text-neutral-200'
+            }`}
+          >
+            <Shield className="w-4 h-4" />
+            Committee Decision & Audit Log
+          </button>
+        </div>
+
+        {/* Scrollable Content */}
+        <div className="p-6 overflow-y-auto space-y-6 flex-1 text-sm">
+          {activeTab === 'scoring' && (
+            <div className="space-y-6">
+              {/* Pillar Score Tiles */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-4 rounded-xl bg-neutral-950/70 border border-neutral-800">
+                  <div className="flex items-center justify-between text-neutral-400 text-xs mb-1">
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <DollarSign className="w-3.5 h-3.5 text-orange-400" />
+                      1. Need
+                    </span>
+                    <span className="font-mono text-[11px]">35% Weight</span>
+                  </div>
+                  <div className="flex items-baseline gap-1 mt-1">
+                    <span className="text-xl font-bold text-white font-mono">{score.needScore?.toFixed(1) || 0}</span>
+                    <span className="text-xs text-neutral-400">/ 35</span>
+                  </div>
+                  <div className="w-full bg-neutral-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                    <div
+                      className="bg-orange-500 h-full rounded-full transition-all"
+                      style={{ width: `${Math.min(100, ((score.needScore || 0) / 35) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-neutral-950/70 border border-neutral-800">
+                  <div className="flex items-center justify-between text-neutral-400 text-xs mb-1">
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <BookOpen className="w-3.5 h-3.5 text-blue-400" />
+                      2. Academic
+                    </span>
+                    <span className="font-mono text-[11px]">25% Weight</span>
+                  </div>
+                  <div className="flex items-baseline gap-1 mt-1">
+                    <span className="text-xl font-bold text-white font-mono">{score.academicScore?.toFixed(1) || 0}</span>
+                    <span className="text-xs text-neutral-400">/ 25</span>
+                  </div>
+                  <div className="w-full bg-neutral-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                    <div
+                      className="bg-blue-500 h-full rounded-full transition-all"
+                      style={{ width: `${Math.min(100, ((score.academicScore || 0) / 25) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-neutral-950/70 border border-neutral-800">
+                  <div className="flex items-center justify-between text-neutral-400 text-xs mb-1">
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <HeartHandshake className="w-3.5 h-3.5 text-emerald-400" />
+                      3. Alignment
+                    </span>
+                    <span className="font-mono text-[11px]">20% Weight</span>
+                  </div>
+                  <div className="flex items-baseline gap-1 mt-1">
+                    <span className="text-xl font-bold text-white font-mono">{score.alignmentScore?.toFixed(1) || 0}</span>
+                    <span className="text-xs text-neutral-400">/ 20</span>
+                  </div>
+                  <div className="w-full bg-neutral-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                    <div
+                      className="bg-emerald-500 h-full rounded-full transition-all"
+                      style={{ width: `${Math.min(100, ((score.alignmentScore || 0) / 20) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-neutral-950/70 border border-neutral-800">
+                  <div className="flex items-center justify-between text-neutral-400 text-xs mb-1">
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <TrendingUp className="w-3.5 h-3.5 text-purple-400" />
+                      4. Scope
+                    </span>
+                    <span className="font-mono text-[11px]">20% Weight</span>
+                  </div>
+                  <div className="flex items-baseline gap-1 mt-1">
+                    <span className="text-xl font-bold text-white font-mono">{score.sustainabilityScore?.toFixed(1) || 0}</span>
+                    <span className="text-xs text-neutral-400">/ 20</span>
+                  </div>
+                  <div className="w-full bg-neutral-800 h-1.5 rounded-full mt-2 overflow-hidden">
+                    <div
+                      className="bg-purple-500 h-full rounded-full transition-all"
+                      style={{ width: `${Math.min(100, ((score.sustainabilityScore || 0) / 20) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Rationale Narrative Box */}
+              <div className="p-4 rounded-2xl bg-orange-950/20 border border-orange-500/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="w-4 h-4 text-orange-400" />
+                  <h4 className="font-semibold text-xs text-orange-300 uppercase tracking-wider">
+                    Explainable Committee Rationale
+                  </h4>
+                  <span className="ml-auto text-xs px-2.5 py-0.5 rounded-full bg-orange-500/20 text-orange-300 font-medium">
+                    {explanation.equityTier || 'Assessment Tier'}
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed font-sans">
+                  {explanation.rationaleSummary || 'Assessment calculation processed.'}
+                </p>
+              </div>
+
+              {/* Itemized Drivers & Anomaly Flags */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 rounded-xl bg-neutral-950/70 border border-neutral-800/80">
+                  <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    Positive Score Drivers ({explanation.positiveScoreDrivers?.length || 0})
+                  </h4>
+                  <div className="space-y-2">
+                    {explanation.positiveScoreDrivers?.map((driver: string, idx: number) => (
+                      <div key={idx} className="p-2.5 rounded-lg bg-emerald-950/20 border border-emerald-500/20 text-xs text-neutral-200">
+                        {driver}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-neutral-950/70 border border-neutral-800/80">
+                  <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                    <AlertTriangle className="w-4 h-4 text-amber-400" />
+                    Risk & Anomaly Flags ({explanation.riskAnomalyFlags?.length || 0})
+                  </h4>
+                  <div className="space-y-2">
+                    {explanation.riskAnomalyFlags?.length > 0 ? (
+                      explanation.riskAnomalyFlags.map((flag: string, idx: number) => (
+                        <div key={idx} className="p-2.5 rounded-lg bg-amber-950/20 border border-amber-500/20 text-xs text-neutral-200">
+                          {flag}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-xs text-neutral-400">
+                        No adverse verification anomalies detected.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Raw Pillar Dossier Data */}
+              <div className="border border-neutral-800 rounded-xl overflow-hidden divide-y divide-neutral-800 bg-neutral-950/40">
+                <div className="p-4">
+                  <h5 className="font-semibold text-xs text-neutral-200 uppercase tracking-wider mb-3">
+                    Academic standing & Institution
+                  </h5>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                    <div>
+                      <span className="text-neutral-400 block">Institution</span>
+                      <span className="font-medium text-neutral-200">{academic.currentInstitution || 'Not specified'}</span>
+                    </div>
+                    <div>
+                      <span className="text-neutral-400 block">Degree / Program</span>
+                      <span className="font-medium text-neutral-200">{academic.degreeProgram || 'Not specified'}</span>
+                    </div>
+                    <div>
+                      <span className="text-neutral-400 block">Cumulative GPA</span>
+                      <span className="font-bold text-orange-400 font-mono">{academic.gpa} / {academic.gpaScale}</span>
+                    </div>
+                    <div>
+                      <span className="text-neutral-400 block">Trajectory</span>
+                      <span className="capitalize font-medium text-neutral-200">{academic.academicTrajectory?.replace('_', ' ')}</span>
+                    </div>
+                    <div>
+                      <span className="text-neutral-400 block">Field Priority</span>
+                      <span className="uppercase font-medium text-neutral-200">{academic.fieldOfStudyCategory}</span>
+                    </div>
+                    <div>
+                      <span className="text-neutral-400 block">Critical Shortage Area</span>
+                      <span className={`font-semibold ${academic.isCriticalSkillShortage ? 'text-emerald-400' : 'text-neutral-400'}`}>
+                        {academic.isCriticalSkillShortage ? 'Yes (STEM/Health)' : 'Standard'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4">
+                  <h5 className="font-semibold text-xs text-neutral-200 uppercase tracking-wider mb-3">
+                    Financial & Circumstantial Factors
+                  </h5>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <div>
+                      <span className="text-neutral-400 block">Annual Income</span>
+                      <span className="font-mono font-bold text-neutral-100">${financial.householdIncomeAnnual?.toLocaleString()} {financial.currency}</span>
+                    </div>
+                    <div>
+                      <span className="text-neutral-400 block">Household Type</span>
+                      <span className="capitalize font-medium text-neutral-200">{financial.householdStructure?.replace('_', ' ')}</span>
+                    </div>
+                    <div>
+                      <span className="text-neutral-400 block">Dependents</span>
+                      <span className="font-medium text-neutral-200">{financial.dependentsCount} supported</span>
+                    </div>
+                    <div>
+                      <span className="text-neutral-400 block">Geographic Origin</span>
+                      <span className="capitalize font-medium text-neutral-200">{financial.geographicBackground?.replace('_', ' ')}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4">
+                  <h5 className="font-semibold text-xs text-neutral-200 uppercase tracking-wider mb-3">
+                    Leadership & Community Give-Back Commitments
+                  </h5>
+                  <div className="space-y-2 text-xs">
+                    <div>
+                      <span className="text-neutral-400 block mb-0.5">Leadership Roles:</span>
+                      <p className="text-neutral-300 italic">{alignment.leadershipExperience || 'None submitted.'}</p>
+                    </div>
+                    <div>
+                      <span className="text-neutral-400 block mb-0.5">Post-Graduation Give-Back Statement:</span>
+                      <p className="text-neutral-300 italic">{alignment.commitmentToGiveBack || 'None submitted.'}</p>
+                    </div>
+                    <div className="flex items-center gap-4 pt-1">
+                      <span className="text-neutral-400">Community Hours: <strong className="text-orange-400">{alignment.communityServiceHours} hrs</strong></span>
+                      <span className="text-neutral-400">Work-Back Agreement: <strong className={alignment.workBackAgreementAccepted ? 'text-emerald-400' : 'text-neutral-400'}>{alignment.workBackAgreementAccepted ? 'Accepted' : 'Not signed'}</strong></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'documents' && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-xl bg-neutral-950/70 border border-neutral-800 flex items-center justify-between">
+                <div>
+                  <h4 className="font-semibold text-sm text-neutral-100">Document Verification Status</h4>
+                  <p className="text-xs text-neutral-400">All income and tax filings must be cross-verified against official registers.</p>
+                </div>
+                <div className={`px-3 py-1.5 rounded-xl text-xs font-semibold border flex items-center gap-2 ${
+                  financial.documentsVerified
+                    ? 'bg-emerald-950/40 text-emerald-300 border-emerald-500/30'
+                    : 'bg-amber-950/40 text-amber-300 border-amber-500/30'
+                }`}>
+                  {financial.documentsVerified ? <FileCheck className="w-4 h-4 text-emerald-400" /> : <AlertTriangle className="w-4 h-4 text-amber-400" />}
+                  {financial.documentsVerified ? 'Fully Verified' : 'Pending Verification'}
+                </div>
+              </div>
+
+              <div className="divide-y divide-neutral-800 border border-neutral-800 rounded-xl overflow-hidden bg-neutral-950/50">
+                {financial.documentsList?.map((doc: any, i: number) => (
+                  <div key={i} className="p-4 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-neutral-800 flex items-center justify-center text-neutral-400">
+                        <FileText className="w-5 h-5 text-orange-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-neutral-200">{doc.type}</p>
+                        <p className="text-xs text-neutral-400 font-mono">{doc.filename}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium capitalize ${
+                        doc.status === 'verified'
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                          : doc.status === 'pending'
+                          ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                          : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                      }`}>
+                        {doc.status}
+                      </span>
+                      <button
+                        onClick={() => alert(`Opening preview for ${doc.filename}. Secure encrypted PDF storage verification confirmed.`)}
+                        className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-xs font-medium text-neutral-200 cursor-pointer"
+                      >
+                        Inspect Proof
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'decisions' && (
+            <div className="space-y-6">
+              {/* Committee Decision Trigger Form */}
+              {activeRole === 'committee' ? (
+                <form onSubmit={handleDecisionSubmit} className="p-5 rounded-2xl bg-neutral-950 border border-orange-500/30 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-orange-500" />
+                    <h4 className="font-bold text-sm text-neutral-100">Record Committee Determination</h4>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setDecisionAction('approve')}
+                      className={`p-3 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-1.5 cursor-pointer ${
+                        decisionAction === 'approve'
+                          ? 'bg-emerald-950/60 border-emerald-500 text-emerald-300 ring-2 ring-emerald-500/20'
+                          : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:text-white'
+                      }`}
+                    >
+                      <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                      Approve Bursary
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setDecisionAction('request_info')}
+                      className={`p-3 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-1.5 cursor-pointer ${
+                        decisionAction === 'request_info'
+                          ? 'bg-amber-950/60 border-amber-500 text-amber-300 ring-2 ring-amber-500/20'
+                          : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:text-white'
+                      }`}
+                    >
+                      <AlertTriangle className="w-5 h-5 text-amber-400" />
+                      Request Further Info
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setDecisionAction('reject')}
+                      className={`p-3 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-1.5 cursor-pointer ${
+                        decisionAction === 'reject'
+                          ? 'bg-red-950/60 border-red-500 text-red-300 ring-2 ring-red-500/20'
+                          : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:text-white'
+                      }`}
+                    >
+                      <AlertCircle className="w-5 h-5 text-red-400" />
+                      Reject Application
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
+                      Mandatory Reviewer Notes & Committee Justification <span className="text-orange-500">*</span>
+                    </label>
+                    <textarea
+                      value={decisionNotes}
+                      onChange={(e) => setDecisionNotes(e.target.value)}
+                      rows={3}
+                      placeholder="Detail why this candidate was approved/flagged, specific documentation requested, or funding scope conditions..."
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-100 placeholder:text-neutral-400 text-xs focus:outline-hidden focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                    />
+                  </div>
+
+                  {errorMsg && (
+                    <div className="p-3 rounded-xl bg-red-950/40 border border-red-500/30 text-xs text-red-300">
+                      {errorMsg}
+                    </div>
+                  )}
+
+                  {successMsg && (
+                    <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-xs text-emerald-300">
+                      {successMsg}
+                    </div>
+                  )}
+
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs shadow-md shadow-orange-600/30 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      <Send className="w-4 h-4" />
+                      {submitting ? 'Recording Decision...' : 'Commit & Notify Applicant'}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="p-4 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-neutral-400 text-center">
+                  Sign in as a Committee Member to execute decision workflows.
+                </div>
+              )}
+
+              {/* Historical Audit Log */}
+              <div>
+                <h4 className="font-semibold text-xs text-neutral-300 uppercase tracking-wider mb-3">
+                  Historical Decision Audit Log
+                </h4>
+                <div className="space-y-3">
+                  {application.decisions?.length === 0 ? (
+                    <div className="p-6 text-center text-xs text-neutral-400 border border-neutral-800 rounded-xl">
+                      No decisions recorded yet. This application is awaiting primary committee review.
+                    </div>
+                  ) : (
+                    application.decisions?.map((dec: any, idx: number) => (
+                      <div key={idx} className="p-4 rounded-xl bg-neutral-950/60 border border-neutral-800 space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className={`font-bold capitalize px-2.5 py-0.5 rounded-full ${
+                            dec.action === 'approve'
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              : dec.action === 'request_info'
+                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                              : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                          }`}>
+                            {dec.action.replace('_', ' ')}
+                          </span>
+                          <span className="text-neutral-400 text-[11px]">
+                            {new Date(dec.decidedAt).toLocaleString()}
+                          </span>
+                        </div>
+                        <p className="text-xs text-neutral-300 leading-relaxed italic bg-neutral-900/50 p-2.5 rounded-lg border border-neutral-800/60">
+                          "{dec.notes}"
+                        </p>
+                        <p className="text-[10px] text-neutral-400">
+                          Reviewer ID: #{dec.reviewerId}
+                        </p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};

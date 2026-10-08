@@ -1,0 +1,8 @@
+{
+  "name": "EDUFA - Bursary & Sponsorship Allocation Fairness Scorer",
+  "description": "Multi-pillar, transparent, and explainable scoring engine for objective bursary and sponsorship allocations with RBAC, anonymized review mode, and dual notification workflows.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
