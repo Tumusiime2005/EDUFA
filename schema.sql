@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   uid TEXT NOT NULL UNIQUE,
   email TEXT NOT NULL,
+  password TEXT,
   role TEXT NOT NULL DEFAULT 'applicant', -- 'applicant' | 'committee' | 'admin'
   created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW() NOT NULL
 );

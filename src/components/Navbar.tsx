@@ -9,6 +9,8 @@ import {
   ChevronDown,
   Scale,
   PlusCircle,
+  UserPlus,
+  LogIn,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { NotificationCenter } from './NotificationCenter.tsx';
@@ -27,6 +29,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewApplicationModal }) => 
     signInWithGoogle,
     switchDemoUser,
     signOut,
+    openAuthModal,
   } = useAuth();
 
   const [roleMenuOpen, setRoleMenuOpen] = React.useState(false);
@@ -99,6 +102,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewApplicationModal }) => 
               </span>
             </button>
           )}
+
+          {/* Register / Sign In Buttons */}
+          <button
+            onClick={() => openAuthModal('register')}
+            className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-orange-600 hover:bg-orange-500 text-white shadow-sm shadow-orange-600/30 transition-all cursor-pointer"
+          >
+            <UserPlus className="w-3.5 h-3.5" />
+            Register
+          </button>
 
           {/* New Application CTA */}
           <button
@@ -186,10 +198,40 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewApplicationModal }) => 
                   <div className="pt-2 border-t border-neutral-800 mt-2 space-y-1">
                     <button
                       onClick={() => {
-                        signInWithGoogle();
+                        openAuthModal('register');
                         setRoleMenuOpen(false);
                       }}
                       className="w-full text-left px-3 py-2 rounded-xl hover:bg-neutral-800 text-orange-400 font-medium flex items-center gap-2 cursor-pointer"
+                    >
+                      <UserPlus className="w-4 h-4 text-orange-400" />
+                      Create Applicant Account
+                    </button>
+                    <button
+                      onClick={() => {
+                        openAuthModal('login');
+                        setRoleMenuOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-neutral-800 text-neutral-300 font-medium flex items-center gap-2 cursor-pointer"
+                    >
+                      <LogIn className="w-4 h-4 text-neutral-400" />
+                      Applicant Sign In
+                    </button>
+                    <button
+                      onClick={() => {
+                        openAuthModal('admin');
+                        setRoleMenuOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-neutral-800 text-amber-300 font-medium flex items-center gap-2 cursor-pointer"
+                    >
+                      <Shield className="w-4 h-4 text-amber-400" />
+                      Committee Evaluator Login
+                    </button>
+                    <button
+                      onClick={() => {
+                        signInWithGoogle();
+                        setRoleMenuOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-neutral-800 text-neutral-400 hover:text-white font-medium flex items-center gap-2 cursor-pointer"
                     >
                       <Sparkles className="w-4 h-4 text-orange-400" />
                       Sign in with Google OAuth

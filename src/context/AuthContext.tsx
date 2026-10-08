@@ -23,6 +23,12 @@ interface AuthContextType {
   setActiveRole: (role: 'applicant' | 'committee') => void;
   anonymizedMode: boolean;
   setAnonymizedMode: (val: boolean) => void;
+  isAuthModalOpen: boolean;
+  setIsAuthModalOpen: (open: boolean) => void;
+  authModalTab: 'register' | 'login' | 'admin';
+  openAuthModal: (tab?: 'register' | 'login' | 'admin') => void;
+  registerApplicant: (data: { email: string; password?: string; fullName: string; phone?: string; region?: string }) => Promise<void>;
+  loginUserAccount: (email: string, password?: string, expectedRole?: 'applicant' | 'committee') => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   switchDemoUser: (role: 'applicant' | 'committee') => Promise<void>;
   signOut: () => Promise<void>;
@@ -31,14 +37,22 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const LOCAL_STORAGE_KEY = 'edufa_user_session_v2';
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeRole, setActiveRole] = useState<'applicant' | 'committee'>('committee');
   const [anonymizedMode, setAnonymizedMode] = useState<boolean>(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalTab, setAuthModalTab] = useState<'register' | 'login' | 'admin'>('register');
 
-  // Sync user with backend Cloud SQL database
+  const openAuthModal = (tab: 'register' | 'login' | 'admin' = 'register') => {
+    setAuthModalTab(tab);
+    setIsAuthModalOpen(true);
+  };
+
   const syncWithBackend = async (uid: string, email: string, role: string, fullName?: string) => {
     try {
       const res = await fetch('/api/auth/sync', {
@@ -49,7 +63,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (res.ok) {
         const data = await res.json();
         setCurrentUser(data.user);
-        setActiveRole(data.user.role === 'committee' ? 'committee' : 'applicant');
+        setActiveRole(data.user.role === 'committee' || data.user.role === 'admin' ? 'committee' : 'applicant');
+        try {
+          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data.user));
+        } catch (_) {}
         return data.user;
       }
     } catch (err) {
@@ -59,14 +76,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    // Check saved session
+    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed: AppUser = JSON.parse(saved);
+        setCurrentUser(parsed);
+        setActiveRole(parsed.role === 'committee' || parsed.role === 'admin' ? 'committee' : 'applicant');
+      } catch (_) {}
+    }
+
     // Listen for Firebase Auth changes
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
       if (fbUser && fbUser.email) {
         await syncWithBackend(fbUser.uid, fbUser.email, 'applicant', fbUser.displayName || undefined);
         setLoading(false);
-      } else {
-        // Default session for DRAGONS ENTERPRISES evaluator
+      } else if (!saved) {
+        // Default committee lead session
         await syncWithBackend(
           'admin-committee-uid',
           'admin@dragonsenterprises.com',
@@ -75,11 +102,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         );
         setActiveRole('committee');
         setLoading(false);
+      } else {
+        setLoading(false);
       }
     });
 
     return () => unsubscribe();
   }, []);
+
+  const registerApplicant = async (data: { email: string; password?: string; fullName: string; phone?: string; region?: string }) => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const responseData = await res.json();
+      if (!res.ok) {
+        throw new Error(responseData.error || 'Failed to create applicant account');
+      }
+      setCurrentUser(responseData.user);
+      setActiveRole('applicant');
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(responseData.user));
+      setIsAuthModalOpen(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loginUserAccount = async (email: string, password?: string, expectedRole?: 'applicant' | 'committee') => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, expectedRole }),
+      });
+      const responseData = await res.json();
+      if (!res.ok) {
+        throw new Error(responseData.error || 'Login failed');
+      }
+      setCurrentUser(responseData.user);
+      setActiveRole(responseData.user.role === 'committee' || responseData.user.role === 'admin' ? 'committee' : 'applicant');
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(responseData.user));
+      setIsAuthModalOpen(false);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const signInWithGoogle = async () => {
     try {
@@ -123,8 +194,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (e) {
       console.error(e);
     }
-    // Switch to applicant view
-    await switchDemoUser('applicant');
+    localStorage.removeItem(LOCAL_STORAGE_KEY);
+    setCurrentUser(null);
+    setActiveRole('applicant');
   };
 
   const refreshUserData = async () => {
@@ -148,6 +220,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setActiveRole,
         anonymizedMode,
         setAnonymizedMode,
+        isAuthModalOpen,
+        setIsAuthModalOpen,
+        authModalTab,
+        openAuthModal,
+        registerApplicant,
+        loginUserAccount,
         signInWithGoogle,
         switchDemoUser,
         signOut,

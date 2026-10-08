@@ -38,21 +38,39 @@ export async function createApplicationRecord({
       explanationJson: JSON.stringify(calculated.explanation),
     }).returning();
 
-    // Create notification for applicant
-    await db.insert(notifications).values({
-      recipientId: applicantId,
-      title: 'Application Submitted',
-      message: `Your bursary application #${app.id} was successfully submitted with a preliminary Fairness Score of ${calculated.compositeScore.toFixed(1)}/100. Our committee is actively reviewing your dossier.`,
-    });
-
-    // Notify any committee members
-    const committeeUsers = await db.select().from(users).where(eq(users.role, 'committee'));
-    for (const cUser of committeeUsers) {
+    // Notifications (non-blocking)
+    try {
       await db.insert(notifications).values({
-        recipientId: cUser.id,
-        title: 'New Bursary Application Submitted',
-        message: `Application #${app.id} logged. Preliminary Composite Fairness Score: ${calculated.compositeScore.toFixed(1)}/100 (${calculated.explanation.equityTier}).`,
+        recipientId: applicantId,
+        title: 'Application Submitted',
+        message: `Your bursary application #${app.id} was successfully submitted with a preliminary Fairness Score of ${calculated.compositeScore.toFixed(1)}/100. Our committee is actively reviewing your dossier.`,
       });
+
+      let committeeUsers = await db.select().from(users).where(eq(users.role, 'committee'));
+      if (committeeUsers.length === 0) {
+        const adminEmail = 'admin@dragonsenterprises.com';
+        const existingAdmin = await db.select().from(users).where(eq(users.email, adminEmail));
+        if (existingAdmin[0]) {
+          committeeUsers = [existingAdmin[0]];
+        } else {
+          const [newAdmin] = await db.insert(users).values({
+            uid: 'admin-committee-uid',
+            email: adminEmail,
+            role: 'committee',
+          }).returning();
+          committeeUsers = [newAdmin];
+        }
+      }
+
+      for (const cUser of committeeUsers) {
+        await db.insert(notifications).values({
+          recipientId: cUser.id,
+          title: 'New Bursary Application Submitted',
+          message: `Application #${app.id} logged. Preliminary Composite Fairness Score: ${calculated.compositeScore.toFixed(1)}/100 (${calculated.explanation.equityTier}).`,
+        });
+      }
+    } catch (notifErr) {
+      console.warn('Notification insert notice:', notifErr);
     }
 
     return { application: app, scoreRecord: score };
@@ -195,7 +213,27 @@ export async function submitCommitteeDecision({
 
 export async function getUserNotifications(userId: number) {
   try {
-    return await db.select().from(notifications)
+    const user = await db.select().from(users).where(eq(users.id, userId));
+    const isCommittee = user[0] && (user[0].role === 'committee' || user[0].role === 'admin');
+
+    if (isCommittee) {
+      const committeeUsers = await db.select().from(users).where(eq(users.role, 'committee'));
+      const committeeIds = new Set(committeeUsers.map((u) => u.id));
+      committeeIds.add(userId);
+
+      const allNotifs = await db.select().from(notifications).orderBy(desc(notifications.createdAt));
+      return allNotifs.filter(
+        (n) =>
+          committeeIds.has(n.recipientId) ||
+          n.title.toLowerCase().includes('application submitted') ||
+          n.title.toLowerCase().includes('candidate') ||
+          n.title.toLowerCase().includes('dossier')
+      );
+    }
+
+    return await db
+      .select()
+      .from(notifications)
       .where(eq(notifications.recipientId, userId))
       .orderBy(desc(notifications.createdAt));
   } catch (error) {

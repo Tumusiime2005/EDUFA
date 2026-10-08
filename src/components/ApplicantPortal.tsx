@@ -16,6 +16,7 @@ import {
   Send,
   HelpCircle,
   FileCheck,
+  UserPlus,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { ApplicationDetailModal } from './ApplicationDetailModal.tsx';
@@ -31,15 +32,16 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({
   onOpenNewApplicationModal,
   onRefresh,
 }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, openAuthModal } = useAuth();
   const [selectedApp, setSelectedApp] = useState<any | null>(null);
   const [infoReply, setInfoReply] = useState('');
   const [replySubmitting, setReplySubmitting] = useState(false);
   const [replySuccess, setReplySuccess] = useState(false);
 
-  // Filter applications belonging to current applicant
+  // Filter applications belonging to current applicant, or default to active dossier
   const userApps = applications.filter((a) => a.applicantId === currentUser?.id);
-  const activeApp = userApps[0] || null;
+  const [selectedDossierId, setSelectedDossierId] = useState<number | null>(null);
+  const activeApp = (selectedDossierId ? applications.find((a) => a.id === selectedDossierId) : null) || userApps[0] || (applications.length > 0 ? applications[0] : null);
 
   const score = activeApp?.scoreRecord || {};
   const explanation = score.explanation || {};
@@ -81,13 +83,22 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({
           </p>
         </div>
 
-        <button
-          onClick={onOpenNewApplicationModal}
-          className="px-5 py-3 rounded-2xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs shadow-lg shadow-orange-600/30 transition-all flex items-center gap-2 cursor-pointer shrink-0"
-        >
-          <PlusCircle className="w-4 h-4" />
-          Submit New Bursary Dossier
-        </button>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={() => openAuthModal('register')}
+            className="px-4 py-3 rounded-2xl bg-neutral-900 hover:bg-neutral-800 text-orange-400 border border-orange-500/30 font-bold text-xs transition-all flex items-center gap-2 cursor-pointer shrink-0 shadow-sm"
+          >
+            <UserPlus className="w-4 h-4 text-orange-400" />
+            Create Applicant Account
+          </button>
+          <button
+            onClick={onOpenNewApplicationModal}
+            className="px-5 py-3 rounded-2xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs shadow-lg shadow-orange-600/30 transition-all flex items-center gap-2 cursor-pointer shrink-0"
+          >
+            <PlusCircle className="w-4 h-4" />
+            Submit New Bursary Dossier
+          </button>
+        </div>
       </div>
 
       {activeApp ? (
@@ -103,6 +114,22 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({
                 <p className="text-xs text-neutral-400">
                   {activeApp.academicData?.currentInstitution} • Submitted on {new Date(activeApp.createdAt).toLocaleDateString()}
                 </p>
+                {applications.length > 1 && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-[11px] text-neutral-500 font-medium">Switch Dossier:</span>
+                    <select
+                      value={activeApp.id}
+                      onChange={(e) => setSelectedDossierId(Number(e.target.value))}
+                      className="text-xs px-2.5 py-1 bg-neutral-950 border border-neutral-800 rounded-lg text-neutral-300 focus:outline-hidden focus:border-orange-500"
+                    >
+                      {applications.map((app) => (
+                        <option key={app.id} value={app.id}>
+                          Dossier #{app.id} - {app.academicData?.degreeProgram || 'Program'} ({app.status})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-3">

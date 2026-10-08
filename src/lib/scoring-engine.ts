@@ -1,3 +1,27 @@
+export interface NextOfKinData {
+  fullName: string;
+  relationship: string;
+  phone: string;
+  gender: 'male' | 'female';
+  nin: string;
+}
+
+export interface LevelCompletionProof {
+  levelCompleted: string; // e.g. UCE (O-Level), UACE (A-Level), Diploma, Degree
+  completionYear: string;
+  indexOrRegNumber: string;
+  filename: string;
+  isScanned: boolean;
+  scanTimestamp?: string;
+  fileData?: string;
+}
+
+export interface PersonalData {
+  dateOfBirth: string;
+  passportPhotoUrl?: string;
+  nextOfKin: NextOfKinData;
+}
+
 export interface FinancialData {
   householdIncomeAnnual: number;
   currency: string;
@@ -13,6 +37,7 @@ export interface FinancialData {
     status: 'verified' | 'pending' | 'flagged';
     url?: string;
   }>;
+  personalData?: PersonalData;
 }
 
 export interface AcademicData {
@@ -26,6 +51,26 @@ export interface AcademicData {
   fieldOfStudyCategory: 'stem' | 'healthcare' | 'education' | 'commerce' | 'humanities' | 'law';
   isCriticalSkillShortage: boolean;
   matricOrEntrancePercentile: number; // e.g. 85th percentile
+  levelCompletionProof?: LevelCompletionProof;
+}
+
+/**
+ * Validates Next of Kin NIN according to Uganda National Identification guidelines in the background.
+ * Exact 14 characters, uppercase alphanumeric, CF for female, CM for male.
+ * Emits generic message without exposing internal rule hint.
+ */
+export function validateNextOfKinNIN(gender: 'male' | 'female', nin: string): { valid: boolean; error?: string } {
+  const cleanNin = (nin || '').trim();
+  if (cleanNin.length !== 14 || !/^[A-Z0-9]{14}$/.test(cleanNin)) {
+    return { valid: false, error: 'Invalid National Identification Number (NIN). Please verify the next of kin identification number.' };
+  }
+  if (gender === 'female' && !cleanNin.startsWith('CF')) {
+    return { valid: false, error: 'Invalid National Identification Number (NIN). Please verify the next of kin identification number.' };
+  }
+  if (gender === 'male' && !cleanNin.startsWith('CM')) {
+    return { valid: false, error: 'Invalid National Identification Number (NIN). Please verify the next of kin identification number.' };
+  }
+  return { valid: true };
 }
 
 export interface AlignmentData {
@@ -118,20 +163,28 @@ export function calculateFairnessScore(
   // ==========================================
   let needPts = 0;
 
-  // 1.1 Income Level (Max 18 pts)
+  // 1.1 Income Level (Max 18 pts) - Calibrated for Ugandan Shillings (UGX)
   const income = financial.householdIncomeAnnual;
-  if (income <= 4000) {
+  const currency = financial.currency || 'UGX';
+  const isUgxScale = income > 100000 || currency === 'UGX';
+
+  const ultraLowLimit = isUgxScale ? 6000000 : 4000;
+  const lowLimit = isUgxScale ? 15000000 : 8500;
+  const moderateLimit = isUgxScale ? 30000000 : 16000;
+  const upperModerateLimit = isUgxScale ? 50000000 : 25000;
+
+  if (income <= ultraLowLimit) {
     needPts += 18;
-    positiveDrivers.push(`+18 pts: Extreme low household income ($${income.toLocaleString()}/yr) below national poverty line`);
+    positiveDrivers.push(`+18 pts: Extreme low household income (${currency} ${income.toLocaleString()}/yr) below national poverty line`);
     needDetails.push(`Ultra-low income tier: +18 pts`);
-  } else if (income <= 8500) {
+  } else if (income <= lowLimit) {
     needPts += 14;
-    positiveDrivers.push(`+14 pts: Low household income ($${income.toLocaleString()}/yr) within priority bursary threshold`);
+    positiveDrivers.push(`+14 pts: Low household income (${currency} ${income.toLocaleString()}/yr) within priority bursary threshold`);
     needDetails.push(`Low-income tier: +14 pts`);
-  } else if (income <= 16000) {
+  } else if (income <= moderateLimit) {
     needPts += 9;
-    needDetails.push(`Moderate income tier ($${income.toLocaleString()}/yr): +9 pts`);
-  } else if (income <= 25000) {
+    needDetails.push(`Moderate income tier (${currency} ${income.toLocaleString()}/yr): +9 pts`);
+  } else if (income <= upperModerateLimit) {
     needPts += 4;
     needDetails.push(`Upper-moderate income tier: +4 pts`);
   } else {

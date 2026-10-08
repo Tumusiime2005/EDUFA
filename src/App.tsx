@@ -4,6 +4,7 @@ import { Navbar } from './components/Navbar.tsx';
 import { CommitteeDashboard } from './components/CommitteeDashboard.tsx';
 import { ApplicantPortal } from './components/ApplicantPortal.tsx';
 import { NewApplicationModal } from './components/NewApplicationModal.tsx';
+import { AuthModal } from './components/AuthModal.tsx';
 import { Scale, Shield, GraduationCap, Sparkles, RefreshCw, Database } from 'lucide-react';
 
 function MainApp() {
@@ -70,6 +71,9 @@ function MainApp() {
           fetchApplications();
         }}
       />
+
+      {/* Authentication & Registration Modal */}
+      <AuthModal />
 
       {/* Footer */}
       <footer className="border-t border-neutral-800/80 bg-neutral-950/70 mt-16 py-8">

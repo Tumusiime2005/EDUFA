@@ -2,6 +2,9 @@ import express, { Request, Response } from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import { db } from './src/db/index.ts';
+import { users, profiles } from './src/db/schema.ts';
+import { eq } from 'drizzle-orm';
 import {
   createApplicationRecord,
   getAllApplicationsWithDetails,
@@ -10,8 +13,8 @@ import {
   getUserNotifications,
   markNotificationAsRead,
 } from './src/db/applications.ts';
-import { getOrCreateUser, getUserWithProfile } from './src/db/users.ts';
-import { calculateFairnessScore } from './src/lib/scoring-engine.ts';
+import { getOrCreateUser, getUserWithProfile, registerApplicantUser, loginUser } from './src/db/users.ts';
+import { calculateFairnessScore, validateNextOfKinNIN } from './src/lib/scoring-engine.ts';
 
 dotenv.config();
 
@@ -21,7 +24,8 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = 3000;
 
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Health Check
 app.get('/api/health', (_req: Request, res: Response) => {
@@ -41,6 +45,43 @@ app.post('/api/auth/sync', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error syncing auth user:', error);
     res.status(500).json({ error: error.message || 'Failed to sync user' });
+  }
+});
+
+// Applicant Registration
+app.post('/api/auth/register', async (req: Request, res: Response) => {
+  try {
+    const { email, password, fullName, phone, region, role } = req.body;
+    if (!email || !fullName) {
+      return res.status(400).json({ error: 'Email and full name are required.' });
+    }
+    const user = await registerApplicantUser({
+      email,
+      password,
+      fullName,
+      phone,
+      region,
+      role: role || 'applicant',
+    });
+    res.status(201).json({ success: true, user });
+  } catch (error: any) {
+    console.error('Registration error:', error);
+    res.status(400).json({ error: error.message || 'Registration failed' });
+  }
+});
+
+// User / Admin Login
+app.post('/api/auth/login', async (req: Request, res: Response) => {
+  try {
+    const { email, password, expectedRole } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required.' });
+    }
+    const user = await loginUser({ email, password, expectedRole });
+    res.json({ success: true, user });
+  } catch (error: any) {
+    console.error('Login error:', error);
+    res.status(401).json({ error: error.message || 'Login failed' });
   }
 });
 
@@ -92,17 +133,63 @@ app.get('/api/applications/:id', async (req: Request, res: Response) => {
 // Create Application
 app.post('/api/applications', async (req: Request, res: Response) => {
   try {
-    const { applicantId, financialData, academicData, alignmentData, fundingScopeData } = req.body;
-    if (!applicantId || !financialData || !academicData || !alignmentData || !fundingScopeData) {
-      return res.status(400).json({ error: 'All 4 evaluation pillars and applicant ID are required.' });
+    let {
+      applicantId,
+      applicantEmail,
+      applicantName,
+      applicantRegion,
+      financialData,
+      academicData,
+      alignmentData,
+      fundingScopeData,
+    } = req.body;
+
+    if (!financialData || !academicData || !alignmentData || !fundingScopeData) {
+      return res.status(400).json({ error: 'All 4 evaluation pillars are required.' });
     }
+
+    // Background verification for Next of Kin NIN (no public hint exposed)
+    if (financialData?.personalData?.nextOfKin) {
+      const { gender, nin } = financialData.personalData.nextOfKin;
+      if (gender && nin) {
+        const validation = validateNextOfKinNIN(gender, nin);
+        if (!validation.valid) {
+          return res.status(400).json({ error: validation.error });
+        }
+      }
+    }
+
+    // Resolve or create applicant user so foreign key constraint never fails
+    let targetId: number | null = applicantId ? parseInt(applicantId, 10) : null;
+    if (targetId) {
+      const existing = await db.select().from(users).where(eq(users.id, targetId));
+      if (!existing[0]) {
+        targetId = null;
+      }
+    }
+
+    if (!targetId) {
+      const email = applicantEmail || `applicant_${Date.now()}@dragonsenterprises.com`;
+      const name = applicantName || 'Applicant Scholar';
+      const uid = `user_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const user = await getOrCreateUser(uid, email, 'applicant', name);
+      targetId = user.id;
+
+      if (applicantRegion) {
+        await db.update(profiles)
+          .set({ region: applicantRegion })
+          .where(eq(profiles.userId, user.id));
+      }
+    }
+
     const result = await createApplicationRecord({
-      applicantId: parseInt(applicantId, 10),
+      applicantId: targetId,
       financialData,
       academicData,
       alignmentData,
       fundingScopeData,
     });
+
     res.status(201).json(result);
   } catch (error: any) {
     console.error('Error submitting application:', error);
@@ -160,6 +247,20 @@ app.post('/api/notifications/:id/read', async (req: Request, res: Response) => {
     console.error('Error marking notification read:', error);
     res.status(500).json({ error: error.message || 'Failed to update notification' });
   }
+});
+
+// Explicit 404 handler for API routes (prevent Vite SPA from catching API requests and serving HTML)
+app.all('/api/*', (_req: Request, res: Response) => {
+  res.status(404).json({ error: 'API endpoint not found' });
+});
+
+// Explicit error handler for API routes
+app.use((err: any, req: Request, res: Response, next: any) => {
+  console.error('API Error:', err);
+  if (req.path.startsWith('/api') || !res.headersSent) {
+    return res.status(err.status || 500).json({ error: err.message || 'Internal API Server Error' });
+  }
+  next(err);
 });
 
 // Vite middleware (dev) / static file serving (prod)
