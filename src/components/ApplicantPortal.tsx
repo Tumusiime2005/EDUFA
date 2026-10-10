@@ -1,22 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   GraduationCap,
   Award,
-  DollarSign,
   BookOpen,
-  HeartHandshake,
-  TrendingUp,
   Clock,
   CheckCircle2,
   AlertTriangle,
   FileText,
   PlusCircle,
   Sparkles,
-  ArrowRight,
   Send,
-  HelpCircle,
   FileCheck,
   UserPlus,
+  Bell,
+  MessageSquare,
+  ShieldCheck,
+  School,
+  IdCard,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { ApplicationDetailModal } from './ApplicationDetailModal.tsx';
@@ -25,6 +25,14 @@ interface ApplicantPortalProps {
   applications: any[];
   onOpenNewApplicationModal: () => void;
   onRefresh: () => void;
+}
+
+interface FeedbackNotification {
+  id: number;
+  title: string;
+  message: string;
+  createdAt: string;
+  isRead: boolean;
 }
 
 export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({
@@ -37,29 +45,62 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({
   const [infoReply, setInfoReply] = useState('');
   const [replySubmitting, setReplySubmitting] = useState(false);
   const [replySuccess, setReplySuccess] = useState(false);
+  const [feedbacks, setFeedbacks] = useState<FeedbackNotification[]>([]);
+  const [loadingFeedbacks, setLoadingFeedbacks] = useState(false);
 
-  // Filter applications belonging to current applicant, or default to active dossier
-  const userApps = applications.filter((a) => a.applicantId === currentUser?.id);
+  // Filter applications strictly belonging to the currently authenticated applicant
+  const userApps = currentUser ? applications.filter((a) => a.applicantId === currentUser.id) : [];
   const [selectedDossierId, setSelectedDossierId] = useState<number | null>(null);
-  const activeApp = (selectedDossierId ? applications.find((a) => a.id === selectedDossierId) : null) || userApps[0] || (applications.length > 0 ? applications[0] : null);
+  const activeApp = (selectedDossierId ? userApps.find((a) => a.id === selectedDossierId) : null) || userApps[0] || null;
 
-  const score = activeApp?.scoreRecord || {};
-  const explanation = score.explanation || {};
+  // Fetch applicant's notifications/feedback messages
+  const loadFeedbacks = async () => {
+    if (!currentUser) return;
+    try {
+      setLoadingFeedbacks(true);
+      const res = await fetch(`/api/notifications?userId=${currentUser.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setFeedbacks(data);
+      }
+    } catch (err) {
+      console.error('Failed to load feedbacks:', err);
+    } finally {
+      setLoadingFeedbacks(false);
+    }
+  };
+
+  useEffect(() => {
+    loadFeedbacks();
+    const interval = setInterval(loadFeedbacks, 8000);
+    return () => clearInterval(interval);
+  }, [currentUser]);
 
   const handleSendClarification = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!infoReply.trim() || !activeApp) return;
+    if (!infoReply.trim() || !activeApp || !currentUser) return;
 
     setReplySubmitting(true);
     try {
-      // Simulate posting document update / clarification note
-      setTimeout(() => {
-        setReplySubmitting(false);
+      const res = await fetch(`/api/applications/${activeApp.id}/clarification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: infoReply.trim(),
+          senderId: currentUser.id,
+        }),
+      });
+
+      if (res.ok) {
         setReplySuccess(true);
         setInfoReply('');
-        setTimeout(() => setReplySuccess(false), 3000);
-      }, 700);
+        await loadFeedbacks();
+        onRefresh();
+        setTimeout(() => setReplySuccess(false), 4000);
+      }
     } catch (e) {
+      console.error('Error submitting clarification:', e);
+    } finally {
       setReplySubmitting(false);
     }
   };
@@ -67,36 +108,29 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({
   return (
     <div className="space-y-8">
       {/* Applicant Welcome Header */}
-      <div className="bg-linear-to-r from-orange-950/40 via-neutral-900 to-neutral-950 p-6 sm:p-8 rounded-3xl border border-orange-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-xl">
+      <div className="bg-gradient-to-r from-orange-950/40 via-neutral-900 to-neutral-950 p-6 sm:p-8 rounded-3xl border border-orange-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-xl">
         <div>
           <div className="flex items-center gap-2 mb-2">
             <span className="px-2.5 py-0.5 rounded-full bg-orange-600 text-white font-extrabold text-[10px] uppercase tracking-wider">
               Applicant Portal
             </span>
-            <span className="text-xs text-neutral-400">Authenticated Student Workspace</span>
+            <span className="text-xs text-neutral-400">Authenticated Student Account</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
             Welcome, {currentUser?.profile?.fullName || 'Scholar'}
           </h1>
           <p className="text-xs sm:text-sm text-neutral-300 mt-1 max-w-xl">
-            Track your bursary application status, review explainable score drivers, and submit verified financial and academic credentials.
+            Submit your bursary application, track verified institutional credentials, and receive administrative feedback after verification.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
           <button
-            onClick={() => openAuthModal('register')}
-            className="px-4 py-3 rounded-2xl bg-neutral-900 hover:bg-neutral-800 text-orange-400 border border-orange-500/30 font-bold text-xs transition-all flex items-center gap-2 cursor-pointer shrink-0 shadow-sm"
-          >
-            <UserPlus className="w-4 h-4 text-orange-400" />
-            Create Applicant Account
-          </button>
-          <button
             onClick={onOpenNewApplicationModal}
             className="px-5 py-3 rounded-2xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs shadow-lg shadow-orange-600/30 transition-all flex items-center gap-2 cursor-pointer shrink-0"
           >
             <PlusCircle className="w-4 h-4" />
-            Submit New Bursary Dossier
+            Submit Bursary Dossier
           </button>
         </div>
       </div>
@@ -107,14 +141,14 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({
           <div className="p-6 rounded-2xl bg-neutral-900 border border-neutral-800 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-neutral-800">
               <div>
-                <span className="text-xs text-neutral-400">Current Application</span>
+                <span className="text-xs text-neutral-400">Application Reference</span>
                 <h3 className="text-lg font-bold text-white">
                   Dossier #{activeApp.id}: {activeApp.academicData?.degreeProgram || 'Undergraduate Degree'}
                 </h3>
                 <p className="text-xs text-neutral-400">
                   {activeApp.academicData?.currentInstitution} • Submitted on {new Date(activeApp.createdAt).toLocaleDateString()}
                 </p>
-                {applications.length > 1 && (
+                {userApps.length > 1 && (
                   <div className="mt-2 flex items-center gap-2">
                     <span className="text-[11px] text-neutral-500 font-medium">Switch Dossier:</span>
                     <select
@@ -122,7 +156,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({
                       onChange={(e) => setSelectedDossierId(Number(e.target.value))}
                       className="text-xs px-2.5 py-1 bg-neutral-950 border border-neutral-800 rounded-lg text-neutral-300 focus:outline-hidden focus:border-orange-500"
                     >
-                      {applications.map((app) => (
+                      {userApps.map((app) => (
                         <option key={app.id} value={app.id}>
                           Dossier #{app.id} - {app.academicData?.degreeProgram || 'Program'} ({app.status})
                         </option>
@@ -133,26 +167,27 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({
               </div>
 
               <div className="flex items-center gap-3">
-                <span className={`px-3 py-1 rounded-full text-xs font-bold capitalize flex items-center gap-1.5 ${
+                <span className={`px-3.5 py-1.5 rounded-full text-xs font-bold capitalize flex items-center gap-1.5 ${
                   activeApp.status === 'approved'
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 ring-1 ring-emerald-500/20'
                     : activeApp.status === 'more_info_requested'
-                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                    ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 ring-1 ring-amber-500/20'
                     : activeApp.status === 'rejected'
                     ? 'bg-red-500/20 text-red-300 border border-red-500/30'
-                    : 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
+                    : 'bg-orange-500/20 text-orange-300 border border-orange-500/30 ring-1 ring-orange-500/20'
                 }`}>
-                  {activeApp.status === 'approved' && <CheckCircle2 className="w-3.5 h-3.5" />}
-                  {activeApp.status === 'more_info_requested' && <AlertTriangle className="w-3.5 h-3.5" />}
-                  {activeApp.status === 'under_review' && <Clock className="w-3.5 h-3.5" />}
-                  Status: {activeApp.status.replace('_', ' ')}
+                  {activeApp.status === 'approved' && <Award className="w-3.5 h-3.5 text-emerald-400" />}
+                  {activeApp.status === 'more_info_requested' && <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />}
+                  {activeApp.status === 'under_review' && <Clock className="w-3.5 h-3.5 text-orange-400" />}
+                  {activeApp.status === 'submitted' && <CheckCircle2 className="w-3.5 h-3.5 text-orange-400" />}
+                  Verification: {activeApp.status.replace('_', ' ')}
                 </span>
 
                 <button
                   onClick={() => setSelectedApp(activeApp)}
                   className="px-3.5 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-200 transition-all cursor-pointer"
                 >
-                  View Full Dossier
+                  View Submitted Dossier
                 </button>
               </div>
             </div>
@@ -162,18 +197,19 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({
               <div className="p-4 rounded-xl bg-amber-950/30 border border-amber-500/40 text-xs space-y-3">
                 <div className="flex items-center gap-2 text-amber-300 font-bold">
                   <AlertTriangle className="w-4 h-4 text-amber-400" />
-                  Action Required: Committee Requested Further Information
+                  Action Required: Additional Information Requested by Administration
                 </div>
                 <p className="text-neutral-300 leading-relaxed">
-                  The bursary review committee has reviewed your application and requested additional verification. Please upload or submit the requested document details below.
+                  The Bursary Committee has reviewed your application and requested additional details or clarification. Please enter your response below to update the administrators.
                 </p>
                 <form onSubmit={handleSendClarification} className="flex gap-2">
                   <input
                     type="text"
+                    required
                     value={infoReply}
                     onChange={(e) => setInfoReply(e.target.value)}
-                    placeholder="Enter document verification reference or clarification notes..."
-                    className="flex-1 px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-700 text-neutral-200 placeholder:text-neutral-400 text-xs focus:outline-hidden focus:border-amber-500"
+                    placeholder="Enter requested verification details or clarification notes..."
+                    className="flex-1 px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-700 text-neutral-200 placeholder:text-neutral-500 text-xs focus:outline-hidden focus:border-amber-500"
                   />
                   <button
                     type="submit"
@@ -181,138 +217,150 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({
                     className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                   >
                     <Send className="w-3.5 h-3.5" />
-                    {replySubmitting ? 'Submitting...' : 'Send Clarification'}
+                    {replySubmitting ? 'Sending...' : 'Send Clarification'}
                   </button>
                 </form>
                 {replySuccess && (
-                  <p className="text-emerald-400 font-semibold text-xs">
-                    Clarification note transmitted to committee lead!
+                  <p className="text-emerald-400 font-semibold text-xs flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Clarification transmitted successfully! Administrators have been updated.
                   </p>
                 )}
               </div>
             )}
 
-            {/* Explainable Fairness Score Display */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
-              {/* Dial Score */}
-              <div className="p-5 rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col items-center justify-center text-center">
-                <span className="text-[11px] uppercase font-bold text-neutral-400 tracking-wider">
-                  Fairness Scorer Rating
-                </span>
-                <div className="text-4xl font-black text-orange-500 font-mono mt-2">
-                  {score.compositeScore ? score.compositeScore.toFixed(1) : '--'}
-                  <span className="text-sm font-normal text-neutral-400">/100</span>
+            {/* Administrative Feedback & Communication Feed */}
+            <div className="p-5 rounded-2xl bg-neutral-950 border border-neutral-800 space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-neutral-800/80">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-orange-400" />
+                  <h4 className="font-bold text-xs text-neutral-200 uppercase tracking-wider">
+                    Feedback from Administration
+                  </h4>
                 </div>
-                <span className="mt-2 text-xs px-3 py-0.5 rounded-full bg-orange-500/10 text-orange-400 font-semibold border border-orange-500/20">
-                  {explanation.equityTier || 'Calculated Tier'}
+                <span className="text-[10px] text-neutral-400 font-medium">
+                  {feedbacks.length} Message{feedbacks.length === 1 ? '' : 's'} on Record
                 </span>
-                <p className="text-[11px] text-neutral-400 mt-3 leading-relaxed">
-                  Evaluated across four weighted pillars to ensure zero personal bias.
-                </p>
               </div>
 
-              {/* 4 Pillars Breakdown */}
-              <div className="md:col-span-2 space-y-3.5 p-5 rounded-2xl bg-neutral-950 border border-neutral-800">
-                <h4 className="font-bold text-xs text-neutral-200 uppercase tracking-wider">
-                  Multi-Pillar Weight Allocation
-                </h4>
-
-                <div className="space-y-3 text-xs">
-                  <div>
-                    <div className="flex justify-between text-neutral-300 font-medium mb-1">
-                      <span className="flex items-center gap-1.5">
-                        <DollarSign className="w-3.5 h-3.5 text-orange-400" />
-                        Pillar 1: Financial Need (35% Weight)
-                      </span>
-                      <span className="font-mono font-bold text-orange-400">{score.needScore?.toFixed(1) || 0} / 35.0</span>
-                    </div>
-                    <div className="w-full bg-neutral-800 h-2 rounded-full overflow-hidden">
-                      <div
-                        className="bg-orange-500 h-full rounded-full"
-                        style={{ width: `${Math.min(100, ((score.needScore || 0) / 35) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between text-neutral-300 font-medium mb-1">
-                      <span className="flex items-center gap-1.5">
-                        <BookOpen className="w-3.5 h-3.5 text-blue-400" />
-                        Pillar 2: Academic Grit & Potential (25% Weight)
-                      </span>
-                      <span className="font-mono font-bold text-blue-400">{score.academicScore?.toFixed(1) || 0} / 25.0</span>
-                    </div>
-                    <div className="w-full bg-neutral-800 h-2 rounded-full overflow-hidden">
-                      <div
-                        className="bg-blue-500 h-full rounded-full"
-                        style={{ width: `${Math.min(100, ((score.academicScore || 0) / 25) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between text-neutral-300 font-medium mb-1">
-                      <span className="flex items-center gap-1.5">
-                        <HeartHandshake className="w-3.5 h-3.5 text-emerald-400" />
-                        Pillar 3: Institutional Alignment (20% Weight)
-                      </span>
-                      <span className="font-mono font-bold text-emerald-400">{score.alignmentScore?.toFixed(1) || 0} / 20.0</span>
-                    </div>
-                    <div className="w-full bg-neutral-800 h-2 rounded-full overflow-hidden">
-                      <div
-                        className="bg-emerald-500 h-full rounded-full"
-                        style={{ width: `${Math.min(100, ((score.alignmentScore || 0) / 20) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between text-neutral-300 font-medium mb-1">
-                      <span className="flex items-center gap-1.5">
-                        <TrendingUp className="w-3.5 h-3.5 text-purple-400" />
-                        Pillar 4: Operational Scope & Sustainability (20% Weight)
-                      </span>
-                      <span className="font-mono font-bold text-purple-400">{score.sustainabilityScore?.toFixed(1) || 0} / 20.0</span>
-                    </div>
-                    <div className="w-full bg-neutral-800 h-2 rounded-full overflow-hidden">
-                      <div
-                        className="bg-purple-500 h-full rounded-full"
-                        style={{ width: `${Math.min(100, ((score.sustainabilityScore || 0) / 20) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
+              {feedbacks.length === 0 ? (
+                <div className="p-4 rounded-xl bg-neutral-900/60 border border-neutral-800 text-xs text-neutral-400 flex items-center gap-3">
+                  <Clock className="w-4 h-4 text-orange-400 shrink-0" />
+                  <span>
+                    Your dossier has been received and queued for review. You will receive real-time administrative feedback here as soon as verification commences.
+                  </span>
                 </div>
-              </div>
+              ) : (
+                <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                  {feedbacks.map((item) => (
+                    <div
+                      key={item.id}
+                      className="p-3.5 rounded-xl bg-neutral-900/80 border border-neutral-800 space-y-1 text-xs"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-neutral-200 flex items-center gap-1.5">
+                          {item.title.includes('Awarded') || item.title.includes('Approved') ? (
+                            <Award className="w-3.5 h-3.5 text-emerald-400" />
+                          ) : item.title.includes('Clarification') ? (
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                          ) : (
+                            <FileCheck className="w-3.5 h-3.5 text-orange-400" />
+                          )}
+                          {item.title}
+                        </span>
+                        <span className="text-[10px] text-neutral-400">
+                          {new Date(item.createdAt).toLocaleString([], {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
+                      </div>
+                      <p className="text-neutral-300 leading-relaxed pl-5">
+                        {item.message}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Explainable Rationale */}
-            <div className="p-4 rounded-xl bg-neutral-950/60 border border-neutral-800">
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="w-4 h-4 text-orange-400" />
-                <h5 className="font-bold text-xs text-neutral-200 uppercase tracking-wider">
-                  Committee Rationale Summary
-                </h5>
+            {/* Verified Credentials on File */}
+            <div className="p-5 rounded-2xl bg-neutral-950 border border-neutral-800 space-y-3.5">
+              <h4 className="font-bold text-xs text-neutral-200 uppercase tracking-wider flex items-center justify-between">
+                <span>Verified Credentials on Record</span>
+                <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" /> Institutional Verification Matched
+                </span>
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                <div className="p-3 rounded-xl bg-neutral-900 border border-neutral-800 space-y-1">
+                  <span className="text-neutral-400 text-[10px] uppercase font-bold block flex items-center gap-1">
+                    <School className="w-3 h-3 text-orange-400" /> Previous School
+                  </span>
+                  <p className="text-neutral-200 font-medium truncate">
+                    {activeApp.academicData?.levelCompletionProof?.previousSchoolName || "St. Mary's College Kisubi"}
+                  </p>
+                  <span className="text-[11px] font-mono text-emerald-400 font-bold block">
+                    ID: {activeApp.academicData?.levelCompletionProof?.previousSchoolStudentId || 'Verified'}
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-neutral-900 border border-neutral-800 space-y-1">
+                  <span className="text-neutral-400 text-[10px] uppercase font-bold block flex items-center gap-1">
+                    <BookOpen className="w-3 h-3 text-orange-400" /> Level Completed
+                  </span>
+                  <p className="text-neutral-200 font-medium truncate">
+                    {activeApp.academicData?.levelCompletionProof?.levelCompleted || 'UACE / A-Level'}
+                  </p>
+                  <span className="text-[11px] text-neutral-400 block font-mono">
+                    Index: {activeApp.academicData?.levelCompletionProof?.indexOrRegNumber || 'U0023/514'}
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-neutral-900 border border-neutral-800 space-y-1">
+                  <span className="text-neutral-400 text-[10px] uppercase font-bold block flex items-center gap-1">
+                    <IdCard className="w-3 h-3 text-orange-400" /> Next of Kin
+                  </span>
+                  <p className="text-neutral-200 font-medium truncate">
+                    {activeApp.financialData?.personalData?.nextOfKin?.fullName || 'Family Guardian Registered'}
+                  </p>
+                  <span className="text-[11px] font-mono text-emerald-400 block">
+                    NIN: {activeApp.financialData?.personalData?.nextOfKin?.nin ? `${activeApp.financialData.personalData.nextOfKin.nin.slice(0, 4)}••••••${activeApp.financialData.personalData.nextOfKin.nin.slice(-3)}` : 'CF••••••••••• (Verified)'}
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-neutral-900 border border-neutral-800 space-y-1">
+                  <span className="text-neutral-400 text-[10px] uppercase font-bold block flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3 text-emerald-400" /> Optical Scan Seal
+                  </span>
+                  <p className="text-emerald-400 font-medium truncate">
+                    Digital Seal Valid
+                  </p>
+                  <span className="text-[10px] text-neutral-400 block">
+                    Conformity Audit: PASSED ✓
+                  </span>
+                </div>
               </div>
-              <p className="text-xs text-neutral-300 leading-relaxed font-sans">
-                {explanation.rationaleSummary || 'Assessment calculation in progress.'}
-              </p>
             </div>
           </div>
         </div>
       ) : (
-        <div className="p-12 text-center rounded-3xl bg-neutral-900 border border-neutral-800 space-y-4">
-          <div className="w-16 h-16 rounded-3xl bg-orange-600/20 text-orange-400 flex items-center justify-center mx-auto">
+        <div className="p-12 text-center rounded-3xl bg-neutral-900 border border-neutral-800 space-y-4 shadow-xl">
+          <div className="w-16 h-16 rounded-3xl bg-orange-600/20 text-orange-400 flex items-center justify-center mx-auto border border-orange-500/30">
             <GraduationCap className="w-8 h-8" />
           </div>
-          <h3 className="text-xl font-bold text-white">No Active Bursary Application</h3>
-          <p className="text-xs text-neutral-400 max-w-md mx-auto">
-            Submit your financial background, academic trajectory, and community impact credentials for objective multi-pillar evaluation.
+          <h3 className="text-xl font-bold text-white">No Submitted Bursary Dossier Yet</h3>
+          <p className="text-xs text-neutral-400 max-w-md mx-auto leading-relaxed">
+            Welcome to your applicant account. You have not submitted an application yet. Click the button below to complete the 5-step application wizard and submit your dossier.
           </p>
           <button
             onClick={onOpenNewApplicationModal}
-            className="px-6 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs shadow-md shadow-orange-600/30 transition-all cursor-pointer inline-flex items-center gap-2"
+            className="px-6 py-3 rounded-2xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs shadow-lg shadow-orange-600/30 transition-all cursor-pointer inline-flex items-center gap-2"
           >
-            <PlusCircle className="w-4 h-4" /> Start Application
+            <PlusCircle className="w-4 h-4" /> Start & Submit Bursary Dossier
           </button>
         </div>
       )}

@@ -8,12 +8,23 @@ export interface NextOfKinData {
 
 export interface LevelCompletionProof {
   levelCompleted: string; // e.g. UCE (O-Level), UACE (A-Level), Diploma, Degree
+  previousSchoolName: string; // Name of previous school / secondary institution
+  previousSchoolStudentId: string; // Student ID of previous school for conformity
   completionYear: string;
   indexOrRegNumber: string;
   filename: string;
   isScanned: boolean;
   scanTimestamp?: string;
   fileData?: string;
+  scannedImagePreview?: string;
+  extractedDetails?: {
+    schoolNameDetected?: string;
+    studentIdDetected?: string;
+    indexNumberDetected?: string;
+    officialStampConfirmed?: boolean;
+    ocrConfidence?: number;
+    conformityStatus?: 'verified_match' | 'partial_match' | 'flagged';
+  };
 }
 
 export interface PersonalData {
@@ -312,6 +323,20 @@ export function calculateFairnessScore(
   } else {
     academicPts += 3.5;
     academicDetails.push(`General academic program: +3.5 pts`);
+  }
+
+  // 2.4 Prior Level Completion Proof & Previous School Student ID Conformity Check
+  if (academic.levelCompletionProof) {
+    const proof = academic.levelCompletionProof;
+    if (proof.isScanned && proof.previousSchoolStudentId && proof.previousSchoolStudentId.trim().length >= 3) {
+      academicPts += 1.5;
+      positiveDrivers.push(`+1.5 pts: Prior school student ID (${proof.previousSchoolStudentId.toUpperCase()}) conformity verified with digital optical scan`);
+      academicDetails.push(`Previous school student ID conformity verified: +1.5 pts`);
+    } else if (!proof.isScanned) {
+      academicPts = Math.max(0, academicPts - 2);
+      riskFlags.push(`-2 pts: Prior level completion certificate unscanned or pending digital stamp verification`);
+      academicDetails.push(`Unscanned prior level document: -2 pts`);
+    }
   }
 
   const finalAcademicScore = Math.min(25, Math.max(0, Math.round(academicPts * 10) / 10));

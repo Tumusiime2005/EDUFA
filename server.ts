@@ -3,8 +3,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { db } from './src/db/index.ts';
-import { users, profiles } from './src/db/schema.ts';
-import { eq } from 'drizzle-orm';
+import { users, profiles, notifications } from './src/db/schema.ts';
+import { eq, or } from 'drizzle-orm';
 import {
   createApplicationRecord,
   getAllApplicationsWithDetails,
@@ -85,6 +85,20 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
   }
 });
 
+// Verify Current User Session
+app.get('/api/auth/verify', async (req: Request, res: Response) => {
+  try {
+    const userId = req.query.id ? parseInt(req.query.id as string, 10) : null;
+    if (!userId) return res.status(400).json({ error: 'Missing user id' });
+    const user = await getUserWithProfile(userId);
+    if (!user) return res.status(404).json({ error: 'User not found in system registry' });
+    res.json({ success: true, user });
+  } catch (error: any) {
+    console.error('Verify error:', error);
+    res.status(500).json({ error: error.message || 'Verification failed' });
+  }
+});
+
 // Calculate Preview (Instant multi-pillar explainable score calculation)
 app.post('/api/calculate-preview', (req: Request, res: Response) => {
   try {
@@ -159,6 +173,18 @@ app.post('/api/applications', async (req: Request, res: Response) => {
       }
     }
 
+    // Verification for prior level completed and previous school student ID for conformity
+    const levelProof = academicData?.levelCompletionProof;
+    if (!levelProof || !levelProof.previousSchoolStudentId || !levelProof.previousSchoolStudentId.trim()) {
+      return res.status(400).json({ error: 'Student ID of the previous school is required for institutional conformity verification.' });
+    }
+    if (!levelProof.previousSchoolName || !levelProof.previousSchoolName.trim()) {
+      return res.status(400).json({ error: 'Name of the previous school is required for conformity verification.' });
+    }
+    if (!levelProof.isScanned) {
+      return res.status(400).json({ error: 'Level completion proof document must be scanned first via the Digital Optical Scanner.' });
+    }
+
     // Resolve or create applicant user so foreign key constraint never fails
     let targetId: number | null = applicantId ? parseInt(applicantId, 10) : null;
     if (targetId) {
@@ -222,6 +248,43 @@ app.post('/api/applications/:id/decision', async (req: Request, res: Response) =
   } catch (error: any) {
     console.error('Error recording committee decision:', error);
     res.status(500).json({ error: error.message || 'Failed to record committee decision' });
+  }
+});
+
+// Applicant Clarification / Feedback Response
+app.post('/api/applications/:id/clarification', async (req: Request, res: Response) => {
+  try {
+    const appId = parseInt(req.params.id, 10);
+    const { message, senderId } = req.body;
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: 'Clarification message is required.' });
+    }
+
+    // Notify committee members of received clarification
+    const committeeUsers = await db.select().from(users).where(
+      or(eq(users.role, 'committee'), eq(users.role, 'admin'))
+    );
+    for (const cUser of committeeUsers) {
+      await db.insert(notifications).values({
+        recipientId: cUser.id,
+        title: `Clarification Info Received (#${appId})`,
+        message: `Applicant provided additional documents/notes: "${message.trim()}"`,
+      });
+    }
+
+    // Direct feedback receipt to applicant
+    if (senderId) {
+      await db.insert(notifications).values({
+        recipientId: parseInt(senderId, 10),
+        title: 'Information Transmitted to Committee',
+        message: `Your clarification details for application #${appId} have been delivered to the Bursary Committee. Status updated: Under verification.`,
+      });
+    }
+
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Error sending clarification:', error);
+    res.status(500).json({ error: error.message || 'Failed to send clarification' });
   }
 });
 

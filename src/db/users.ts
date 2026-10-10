@@ -115,9 +115,12 @@ export async function loginUser({
     }
 
     // Role verification
-    if (expectedRole && user.role !== expectedRole && user.role !== 'admin') {
-      if (expectedRole === 'committee') {
+    if (expectedRole) {
+      if (expectedRole === 'committee' && user.role !== 'committee' && user.role !== 'admin') {
         throw new Error('This account does not have Committee / Admin evaluator clearance.');
+      }
+      if (expectedRole === 'applicant' && (user.role === 'committee' || user.role === 'admin')) {
+        throw new Error('This is an Administrative account. Please sign in through the Committee & Admin portal.');
       }
     }
 

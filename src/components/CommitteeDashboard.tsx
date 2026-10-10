@@ -108,7 +108,7 @@ export const CommitteeDashboard: React.FC<CommitteeDashboardProps> = ({
             <span className="px-2.5 py-0.5 rounded-full bg-orange-600 text-white font-extrabold text-[10px] uppercase tracking-wider">
               Committee Oversight Room
             </span>
-            <span className="text-xs text-neutral-400">PostgreSQL Cloud SQL Synchronized</span>
+            <span className="text-xs text-neutral-400">System Registry Synchronized</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
             Fairness Allocation Engine

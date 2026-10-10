@@ -28,6 +28,7 @@ interface AuthContextType {
   authModalTab: 'register' | 'login' | 'admin';
   openAuthModal: (tab?: 'register' | 'login' | 'admin') => void;
   registerApplicant: (data: { email: string; password?: string; fullName: string; phone?: string; region?: string }) => Promise<void>;
+  registerUserAccount: (data: { email: string; password?: string; fullName: string; phone?: string; region?: string; role?: 'applicant' | 'committee' }) => Promise<void>;
   loginUserAccount: (email: string, password?: string, expectedRole?: 'applicant' | 'committee') => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   switchDemoUser: (role: 'applicant' | 'committee') => Promise<void>;
@@ -37,18 +38,32 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const LOCAL_STORAGE_KEY = 'edufa_user_session_v2';
+const LOCAL_STORAGE_KEY = 'edufa_user_session_v5';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeRole, setActiveRole] = useState<'applicant' | 'committee'>('committee');
+  const [activeRole, setActiveRoleState] = useState<'applicant' | 'committee'>('applicant');
   const [anonymizedMode, setAnonymizedMode] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalTab, setAuthModalTab] = useState<'register' | 'login' | 'admin'>('register');
+  const [authModalTab, setAuthModalTab] = useState<'register' | 'login' | 'admin'>('login');
 
-  const openAuthModal = (tab: 'register' | 'login' | 'admin' = 'register') => {
+  const setActiveRole = (role: 'applicant' | 'committee') => {
+    // Applicants are strictly locked to applicant view
+    if (currentUser?.role === 'applicant') {
+      setActiveRoleState('applicant');
+      return;
+    }
+    // Admins and committee members are strictly locked to committee dashboard
+    if (currentUser?.role === 'committee' || currentUser?.role === 'admin') {
+      setActiveRoleState('committee');
+      return;
+    }
+    setActiveRoleState(role);
+  };
+
+  const openAuthModal = (tab: 'register' | 'login' | 'admin' = 'login') => {
     setAuthModalTab(tab);
     setIsAuthModalOpen(true);
   };
@@ -63,7 +78,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (res.ok) {
         const data = await res.json();
         setCurrentUser(data.user);
-        setActiveRole(data.user.role === 'committee' || data.user.role === 'admin' ? 'committee' : 'applicant');
+        setActiveRoleState(data.user.role === 'committee' || data.user.role === 'admin' ? 'committee' : 'applicant');
         try {
           localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data.user));
         } catch (_) {}
@@ -76,41 +91,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Check saved session
-    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed: AppUser = JSON.parse(saved);
-        setCurrentUser(parsed);
-        setActiveRole(parsed.role === 'committee' || parsed.role === 'admin' ? 'committee' : 'applicant');
-      } catch (_) {}
-    }
+    // Check saved session & verify existence in database
+    const verifySaved = async () => {
+      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (saved) {
+        try {
+          const parsed: AppUser = JSON.parse(saved);
+          const verifyRes = await fetch(`/api/auth/verify?id=${parsed.id}`);
+          if (verifyRes.ok) {
+            const data = await verifyRes.json();
+            setCurrentUser(data.user);
+            setActiveRoleState(data.user.role === 'committee' || data.user.role === 'admin' ? 'committee' : 'applicant');
+          } else {
+            // User was reset or does not exist
+            localStorage.removeItem(LOCAL_STORAGE_KEY);
+            setCurrentUser(null);
+            setActiveRoleState('applicant');
+          }
+        } catch (_) {
+          localStorage.removeItem(LOCAL_STORAGE_KEY);
+          setCurrentUser(null);
+          setActiveRoleState('applicant');
+        }
+      } else {
+        setCurrentUser(null);
+        setActiveRoleState('applicant');
+      }
+      setLoading(false);
+    };
+
+    verifySaved();
 
     // Listen for Firebase Auth changes
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
       if (fbUser && fbUser.email) {
         await syncWithBackend(fbUser.uid, fbUser.email, 'applicant', fbUser.displayName || undefined);
-        setLoading(false);
-      } else if (!saved) {
-        // Default committee lead session
-        await syncWithBackend(
-          'admin-committee-uid',
-          'admin@dragonsenterprises.com',
-          'committee',
-          'Admin Evaluator'
-        );
-        setActiveRole('committee');
-        setLoading(false);
-      } else {
-        setLoading(false);
       }
     });
 
     return () => unsubscribe();
   }, []);
 
-  const registerApplicant = async (data: { email: string; password?: string; fullName: string; phone?: string; region?: string }) => {
+  const registerUserAccount = async (data: {
+    email: string;
+    password?: string;
+    fullName: string;
+    phone?: string;
+    region?: string;
+    role?: 'applicant' | 'committee';
+  }) => {
     setLoading(true);
     try {
       const res = await fetch('/api/auth/register', {
@@ -120,15 +150,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       const responseData = await res.json();
       if (!res.ok) {
-        throw new Error(responseData.error || 'Failed to create applicant account');
+        throw new Error(responseData.error || 'Failed to create account');
       }
       setCurrentUser(responseData.user);
-      setActiveRole('applicant');
+      const role = responseData.user.role === 'committee' || responseData.user.role === 'admin' ? 'committee' : 'applicant';
+      setActiveRole(role);
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(responseData.user));
       setIsAuthModalOpen(false);
     } finally {
       setLoading(false);
     }
+  };
+
+  const registerApplicant = async (data: { email: string; password?: string; fullName: string; phone?: string; region?: string }) => {
+    return registerUserAccount({ ...data, role: 'applicant' });
   };
 
   const loginUserAccount = async (email: string, password?: string, expectedRole?: 'applicant' | 'committee') => {
@@ -144,7 +179,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error(responseData.error || 'Login failed');
       }
       setCurrentUser(responseData.user);
-      setActiveRole(responseData.user.role === 'committee' || responseData.user.role === 'admin' ? 'committee' : 'applicant');
+      const role = responseData.user.role === 'committee' || responseData.user.role === 'admin' ? 'committee' : 'applicant';
+      setActiveRole(role);
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(responseData.user));
       setIsAuthModalOpen(false);
     } finally {
@@ -225,6 +261,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         authModalTab,
         openAuthModal,
         registerApplicant,
+        registerUserAccount,
         loginUserAccount,
         signInWithGoogle,
         switchDemoUser,

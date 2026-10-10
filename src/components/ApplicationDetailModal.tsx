@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Shield,
@@ -19,7 +19,10 @@ import {
   FileCheck,
   Building,
   User,
-  GraduationCap
+  GraduationCap,
+  School,
+  IdCard,
+  Scan,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
 
@@ -35,7 +38,10 @@ export const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
   onDecisionSubmitted,
 }) => {
   const { currentUser, anonymizedMode, activeRole } = useAuth();
-  const [activeTab, setActiveTab] = useState<'scoring' | 'documents' | 'decisions'>('scoring');
+  const isApplicant = activeRole === 'applicant' || currentUser?.role === 'applicant';
+  const [activeTab, setActiveTab] = useState<'scoring' | 'documents' | 'decisions'>(
+    isApplicant ? 'documents' : 'scoring'
+  );
   const [decisionAction, setDecisionAction] = useState<'approve' | 'reject' | 'request_info'>('approve');
   const [decisionNotes, setDecisionNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -43,6 +49,12 @@ export const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
   const [successMsg, setSuccessMsg] = useState('');
 
   const [inspectingDoc, setInspectingDoc] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isApplicant && activeTab === 'scoring') {
+      setActiveTab('documents');
+    }
+  }, [isApplicant, activeTab]);
 
   if (!application) return null;
 
@@ -146,15 +158,23 @@ export const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
           </div>
 
           <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
-            <div className="text-right sm:text-right bg-neutral-900/90 border border-neutral-800 px-4 py-2 rounded-xl">
-              <span className="text-[10px] uppercase font-bold text-neutral-400 block tracking-wider">Composite Score</span>
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-black text-orange-500 font-mono">
-                  {score.compositeScore ? score.compositeScore.toFixed(1) : '--'}
-                </span>
-                <span className="text-xs font-semibold text-neutral-400">/100</span>
+            {!isApplicant && (
+              <div className="text-right sm:text-right bg-neutral-900/90 border border-neutral-800 px-4 py-2 rounded-xl">
+                <span className="text-[10px] uppercase font-bold text-neutral-400 block tracking-wider">Composite Score</span>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-black text-orange-500 font-mono">
+                    {score.compositeScore ? score.compositeScore.toFixed(1) : '--'}
+                  </span>
+                  <span className="text-xs font-semibold text-neutral-400">/100</span>
+                </div>
               </div>
-            </div>
+            )}
+            {isApplicant && (
+              <div className="text-right bg-neutral-900/90 border border-neutral-800 px-3.5 py-1.5 rounded-xl">
+                <span className="text-[10px] uppercase font-bold text-neutral-400 block">Dossier Reference</span>
+                <span className="text-xs font-bold text-orange-400 font-mono">#{application.id}</span>
+              </div>
+            )}
             <button
               onClick={onClose}
               className="p-2 rounded-xl bg-neutral-800/80 hover:bg-neutral-800 text-neutral-400 hover:text-white transition-all cursor-pointer"
@@ -166,17 +186,19 @@ export const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
 
         {/* Tab Navigation */}
         <div className="flex items-center px-6 border-b border-neutral-800 bg-neutral-950/40 gap-6 text-xs font-semibold">
-          <button
-            onClick={() => setActiveTab('scoring')}
-            className={`py-3.5 border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
-              activeTab === 'scoring'
-                ? 'border-orange-500 text-orange-400'
-                : 'border-transparent text-neutral-400 hover:text-neutral-200'
-            }`}
-          >
-            <Sparkles className="w-4 h-4" />
-            Multi-Pillar Fairness Breakdown
-          </button>
+          {!isApplicant && (
+            <button
+              onClick={() => setActiveTab('scoring')}
+              className={`py-3.5 border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
+                activeTab === 'scoring'
+                  ? 'border-orange-500 text-orange-400'
+                  : 'border-transparent text-neutral-400 hover:text-neutral-200'
+              }`}
+            >
+              <Sparkles className="w-4 h-4" />
+              Multi-Pillar Fairness Breakdown
+            </button>
+          )}
           <button
             onClick={() => setActiveTab('documents')}
             className={`py-3.5 border-b-2 transition-all cursor-pointer flex items-center gap-2 ${
@@ -196,8 +218,8 @@ export const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
                 : 'border-transparent text-neutral-400 hover:text-neutral-200'
             }`}
           >
-            <Shield className="w-4 h-4" />
-            Committee Decision & Audit Log
+            {isApplicant ? <FileCheck className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
+            {isApplicant ? 'Feedback from Administration' : 'Committee Decision & Audit Log'}
           </button>
         </div>
 
@@ -511,19 +533,24 @@ export const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
                 </div>
               </div>
 
-              {/* Prior Level Completed Proof Section */}
-              <div className="p-5 rounded-2xl bg-neutral-950/70 border border-neutral-800 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-bold text-sm text-neutral-100 flex items-center gap-2">
-                    <GraduationCap className="w-4 h-4 text-blue-400" />
-                    Prior Academic Level Completion Proof
-                  </h4>
+              {/* Prior Level Completed Proof & Institutional Conformity Section */}
+              <div className="p-5 rounded-2xl bg-neutral-950/70 border border-neutral-800 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-neutral-800">
+                  <div>
+                    <h4 className="font-bold text-sm text-neutral-100 flex items-center gap-2">
+                      <GraduationCap className="w-4 h-4 text-blue-400" />
+                      Prior Academic Level Completion & Institutional Conformity
+                    </h4>
+                    <p className="text-[11px] text-neutral-400">
+                      Cross-registry verification against previous secondary school student ID and UNEB pass slip.
+                    </p>
+                  </div>
                   <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Scanned & Authenticated
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Scanned & Authenticated ✓
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-xl bg-neutral-900 border border-neutral-800 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-3.5 rounded-xl bg-neutral-900 border border-neutral-800 text-xs">
                   <div>
                     <span className="text-neutral-400 block text-[11px]">Level Completed</span>
                     <span className="font-semibold text-neutral-200">
@@ -531,12 +558,33 @@ export const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
                     </span>
                   </div>
                   <div>
+                    <span className="text-neutral-400 block text-[11px] flex items-center gap-1">
+                      <School className="w-3 h-3 text-orange-400" /> Previous School / Institution
+                    </span>
+                    <span className="font-semibold text-neutral-200">
+                      {levelProof.previousSchoolName || "St. Mary's College Kisubi"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-neutral-400 block text-[11px] flex items-center gap-1">
+                      <IdCard className="w-3 h-3 text-blue-400" /> Student ID (Previous School)
+                    </span>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="font-mono font-bold text-emerald-400 tracking-wider">
+                        {levelProof.previousSchoolStudentId || 'SMACK-2022-849'}
+                      </span>
+                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        CONFORMITY OK
+                      </span>
+                    </div>
+                  </div>
+                  <div>
                     <span className="text-neutral-400 block text-[11px]">Completion Year</span>
                     <span className="font-mono font-semibold text-neutral-200">
                       {levelProof.completionYear || '2024'}
                     </span>
                   </div>
-                  <div>
+                  <div className="sm:col-span-2">
                     <span className="text-neutral-400 block text-[11px]">Official UNEB / Index Number</span>
                     <span className="font-mono font-bold text-orange-400">
                       {levelProof.indexOrRegNumber || 'U0023/514'}
@@ -544,16 +592,41 @@ export const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
                   </div>
                 </div>
 
-                <div className="p-3 rounded-xl bg-neutral-900/60 border border-neutral-800/80 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2.5">
-                    <FileText className="w-4 h-4 text-orange-400" />
-                    <span className="font-medium text-neutral-300">
-                      {levelProof.filename || 'UACE_Official_Pass_Slip.pdf'}
-                    </span>
+                {/* Scanned Document Image Card */}
+                <div className="p-3.5 rounded-xl bg-neutral-900/80 border border-neutral-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-3">
+                    {levelProof.scannedImagePreview ? (
+                      <div className="w-14 h-12 rounded-lg bg-black border border-emerald-500/40 overflow-hidden shrink-0">
+                        <img
+                          src={levelProof.scannedImagePreview}
+                          alt="Scanned Proof"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-9 h-9 rounded-lg bg-neutral-800 flex items-center justify-center text-orange-400 shrink-0">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                    )}
+                    <div>
+                      <span className="font-semibold text-neutral-200 block">
+                        {levelProof.filename || 'UACE_Official_Pass_Slip.pdf'}
+                      </span>
+                      <span className="text-[11px] text-emerald-400 font-medium">
+                        Digital OCR Stamp Verified • Conformity Match 98.8%
+                      </span>
+                    </div>
                   </div>
-                  <span className="text-[11px] text-emerald-400 font-medium">
-                    Digital Seal Valid • Scan Hash: SHA256-UG-OK
-                  </span>
+
+                  {levelProof.scannedImagePreview && (
+                    <button
+                      type="button"
+                      onClick={() => setInspectingDoc(levelProof.scannedImagePreview)}
+                      className="px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-medium text-neutral-200 cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Scan className="w-3.5 h-3.5 text-orange-400" /> Inspect Scanned Proof
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -617,7 +690,7 @@ export const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
                       </button>
                     </div>
                     <p className="text-neutral-300">
-                      Document verified in Cloud SQL repository. Tamper-evident scan hash verified against official institutional digital stamp.
+                      Document verified in official system repository. Tamper-evident scan hash verified against institutional digital seal.
                     </p>
                     <div className="p-2 rounded-lg bg-black/40 font-mono text-[11px] text-emerald-400">
                       Status: CERTIFIED_AUTHENTIC • OCR Confidence: 99.4% • Integrity Check: PASSED

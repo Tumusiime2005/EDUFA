@@ -5,10 +5,11 @@ import { CommitteeDashboard } from './components/CommitteeDashboard.tsx';
 import { ApplicantPortal } from './components/ApplicantPortal.tsx';
 import { NewApplicationModal } from './components/NewApplicationModal.tsx';
 import { AuthModal } from './components/AuthModal.tsx';
+import { InstitutionalAuthGate } from './components/InstitutionalAuthGate.tsx';
 import { Scale, Shield, GraduationCap, Sparkles, RefreshCw, Database } from 'lucide-react';
 
 function MainApp() {
-  const { activeRole, currentUser } = useAuth();
+  const { activeRole, currentUser, loading: authLoading } = useAuth();
   const [applications, setApplications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
@@ -29,8 +30,12 @@ function MainApp() {
   }, []);
 
   useEffect(() => {
-    fetchApplications();
-  }, [fetchApplications]);
+    if (currentUser) {
+      fetchApplications();
+    } else {
+      setLoading(false);
+    }
+  }, [fetchApplications, currentUser]);
 
   return (
     <div className="min-h-screen bg-[#0c0d0e] text-neutral-100 flex flex-col font-sans">
@@ -39,21 +44,33 @@ function MainApp() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {loading && applications.length === 0 ? (
+        {authLoading ? (
           <div className="py-24 text-center space-y-4">
             <div className="w-12 h-12 border-3 border-orange-500/20 border-t-orange-500 rounded-full animate-spin mx-auto" />
-            <p className="text-sm text-neutral-400">Loading dossiers from Cloud SQL PostgreSQL...</p>
+            <p className="text-sm text-neutral-400">Verifying institutional clearance...</p>
+          </div>
+        ) : !currentUser ? (
+          /* System opening screen asking user to sign in or register to check if they are admins */
+          <InstitutionalAuthGate />
+        ) : loading && applications.length === 0 ? (
+          <div className="py-24 text-center space-y-4">
+            <div className="w-12 h-12 border-3 border-orange-500/20 border-t-orange-500 rounded-full animate-spin mx-auto" />
+            <p className="text-sm text-neutral-400">Loading applications and records...</p>
           </div>
         ) : (
           <>
-            {activeRole === 'committee' ? (
-              <CommitteeDashboard
+            {/* Strict role-based isolation:
+                - Applicants can ONLY access the ApplicantPortal
+                - Admins and Committee members can ONLY access the CommitteeDashboard
+            */}
+            {currentUser.role === 'applicant' ? (
+              <ApplicantPortal
                 applications={applications}
                 onRefresh={fetchApplications}
                 onOpenNewApplicationModal={() => setIsNewModalOpen(true)}
               />
             ) : (
-              <ApplicantPortal
+              <CommitteeDashboard
                 applications={applications}
                 onRefresh={fetchApplications}
                 onOpenNewApplicationModal={() => setIsNewModalOpen(true)}

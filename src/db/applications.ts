@@ -1,6 +1,6 @@
 import { db } from './index.ts';
 import { applications, scoreRecords, decisions, notifications, users, profiles } from './schema.ts';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, or } from 'drizzle-orm';
 import { calculateFairnessScore, FinancialData, AcademicData, AlignmentData, FundingScopeData } from '../lib/scoring-engine.ts';
 
 export async function createApplicationRecord({
@@ -40,33 +40,29 @@ export async function createApplicationRecord({
 
     // Notifications (non-blocking)
     try {
+      const applicantUser = await db.select().from(users).where(eq(users.id, applicantId));
+      const applicantProfile = applicantUser[0]
+        ? await db.select().from(profiles).where(eq(profiles.userId, applicantUser[0].id))
+        : [];
+      const applicantName = applicantProfile[0]?.fullName || applicantUser[0]?.email || 'Applicant Scholar';
+
+      // 1. Applicant confirmation feedback (NO points included so loyalty is preserved)
       await db.insert(notifications).values({
         recipientId: applicantId,
-        title: 'Application Submitted',
-        message: `Your bursary application #${app.id} was successfully submitted with a preliminary Fairness Score of ${calculated.compositeScore.toFixed(1)}/100. Our committee is actively reviewing your dossier.`,
+        title: 'Application Received & Dossier Registered',
+        message: `Your bursary application #${app.id} has been successfully submitted and registered. Your credentials, student ID conformity, and supporting documents are now securely queued for Bursary Committee review.`,
       });
 
-      let committeeUsers = await db.select().from(users).where(eq(users.role, 'committee'));
-      if (committeeUsers.length === 0) {
-        const adminEmail = 'admin@dragonsenterprises.com';
-        const existingAdmin = await db.select().from(users).where(eq(users.email, adminEmail));
-        if (existingAdmin[0]) {
-          committeeUsers = [existingAdmin[0]];
-        } else {
-          const [newAdmin] = await db.insert(users).values({
-            uid: 'admin-committee-uid',
-            email: adminEmail,
-            role: 'committee',
-          }).returning();
-          committeeUsers = [newAdmin];
-        }
-      }
+      // 2. Admin notification (only committee & admin members receive this)
+      const committeeUsers = await db.select().from(users).where(
+        or(eq(users.role, 'committee'), eq(users.role, 'admin'))
+      );
 
       for (const cUser of committeeUsers) {
         await db.insert(notifications).values({
           recipientId: cUser.id,
-          title: 'New Bursary Application Submitted',
-          message: `Application #${app.id} logged. Preliminary Composite Fairness Score: ${calculated.compositeScore.toFixed(1)}/100 (${calculated.explanation.equityTier}).`,
+          title: `New Bursary Application Submitted (#${app.id})`,
+          message: `Application #${app.id} logged for ${applicantName}. Dossier is awaiting committee evaluation.`,
         });
       }
     } catch (notifErr) {
@@ -165,6 +161,12 @@ export async function submitCommitteeDecision({
   notes: string;
 }) {
   try {
+    const appRows = await db.select().from(applications).where(eq(applications.id, applicationId));
+    const app = appRows[0];
+    if (!app) {
+      throw new Error(`Application #${applicationId} not found`);
+    }
+
     const [decision] = await db.insert(decisions).values({
       applicationId,
       reviewerId,
@@ -173,36 +175,48 @@ export async function submitCommitteeDecision({
     }).returning();
 
     let newStatus = 'under_review';
-    let notifTitle = 'Update on Your Application';
+    let notifTitle = 'Institutional Verification Update';
     let notifMsg = '';
 
     if (action === 'approve') {
       newStatus = 'approved';
-      notifTitle = '🎉 Bursary Award Approved!';
-      notifMsg = `Congratulations! The Committee has approved your bursary allocation. Notes: "${notes}"`;
+      notifTitle = '🎉 Bursary Awarded!';
+      notifMsg = `Congratulations! Your bursary application #${applicationId} has been awarded by the Bursary Committee. Official verification notes: "${notes}"`;
+
+      // When the bursary has been awarded, the notification to other admins disappears
+      try {
+        const notifs = await db.select().from(notifications);
+        for (const n of notifs) {
+          if (
+            (n.title.includes(`#${applicationId}`) || n.message.includes(`#${applicationId}`)) &&
+            n.recipientId !== app.applicantId
+          ) {
+            await db.delete(notifications).where(eq(notifications.id, n.id));
+          }
+        }
+      } catch (cleanErr) {
+        console.warn('Error clearing awarded notification:', cleanErr);
+      }
     } else if (action === 'reject') {
       newStatus = 'rejected';
-      notifTitle = 'Bursary Allocation Status Decision';
-      notifMsg = `The Committee has concluded review of application #${applicationId}. Status: Not selected in this funding round. Notes: "${notes}"`;
+      notifTitle = 'Bursary Evaluation Decision';
+      notifMsg = `The Committee has concluded review of application #${applicationId}. Status: Not selected in this funding round. Reviewer notes: "${notes}"`;
     } else if (action === 'request_info') {
       newStatus = 'more_info_requested';
       notifTitle = 'Further Documents / Clarification Requested';
-      notifMsg = `The Committee requests additional documentation: "${notes}". Please update your application portal.`;
+      notifMsg = `The Committee requests additional documentation: "${notes}". Please submit clarification notes in your applicant account.`;
     }
 
     await db.update(applications)
       .set({ status: newStatus, updatedAt: new Date() })
       .where(eq(applications.id, applicationId));
 
-    // Get applicant to send notification
-    const app = await db.select().from(applications).where(eq(applications.id, applicationId));
-    if (app[0]) {
-      await db.insert(notifications).values({
-        recipientId: app[0].applicantId,
-        title: notifTitle,
-        message: notifMsg,
-      });
-    }
+    // Send direct feedback notification to applicant after admins verify
+    await db.insert(notifications).values({
+      recipientId: app.applicantId,
+      title: notifTitle,
+      message: notifMsg,
+    });
 
     return decision;
   } catch (error) {
@@ -217,20 +231,35 @@ export async function getUserNotifications(userId: number) {
     const isCommittee = user[0] && (user[0].role === 'committee' || user[0].role === 'admin');
 
     if (isCommittee) {
-      const committeeUsers = await db.select().from(users).where(eq(users.role, 'committee'));
+      const committeeUsers = await db.select().from(users).where(
+        or(eq(users.role, 'committee'), eq(users.role, 'admin'))
+      );
       const committeeIds = new Set(committeeUsers.map((u) => u.id));
       committeeIds.add(userId);
 
+      // Check which applications have already been awarded (approved)
+      const approvedApps = await db.select().from(applications).where(eq(applications.status, 'approved'));
+      const approvedAppTags = new Set(approvedApps.map((a) => `#${a.id}`));
+
       const allNotifs = await db.select().from(notifications).orderBy(desc(notifications.createdAt));
-      return allNotifs.filter(
-        (n) =>
+      return allNotifs.filter((n) => {
+        // Disappear if the bursary has been awarded to this applicant
+        for (const tag of approvedAppTags) {
+          if (n.title.includes(tag) || n.message.includes(tag)) {
+            return false;
+          }
+        }
+
+        return (
           committeeIds.has(n.recipientId) ||
           n.title.toLowerCase().includes('application submitted') ||
           n.title.toLowerCase().includes('candidate') ||
           n.title.toLowerCase().includes('dossier')
-      );
+        );
+      });
     }
 
+    // Applicant ONLY sees their own notifications
     return await db
       .select()
       .from(notifications)
