@@ -48,7 +48,7 @@ export const CommitteeDashboard: React.FC<CommitteeDashboardProps> = ({
 
     const totalScore = applications.reduce((acc, app) => acc + (app.scoreRecord?.compositeScore || 0), 0);
     const avgScore = (totalScore / total).toFixed(1);
-    const tier1Count = applications.filter((app) => (app.scoreRecord?.compositeScore || 0) >= 80).length;
+    const tier1Count = applications.filter((app) => (app.scoreRecord?.compositeScore || 0) >= 86.0).length;
     const approvedCount = applications.filter((app) => app.status === 'approved').length;
     const anomalyCount = applications.filter((app) => !app.financialData?.documentsVerified || (app.scoreRecord?.explanation?.riskAnomalyFlags?.length || 0) > 0).length;
 
@@ -73,10 +73,10 @@ export const CommitteeDashboard: React.FC<CommitteeDashboardProps> = ({
 
       const compScore = app.scoreRecord?.compositeScore || 0;
       let matchesTier = true;
-      if (tierFilter === 'tier1') matchesTier = compScore >= 80;
-      else if (tierFilter === 'tier2') matchesTier = compScore >= 65 && compScore < 80;
-      else if (tierFilter === 'tier3') matchesTier = compScore >= 50 && compScore < 65;
-      else if (tierFilter === 'tier4') matchesTier = compScore < 50;
+      if (tierFilter === 'tier1') matchesTier = compScore >= 86.0;
+      else if (tierFilter === 'tier2') matchesTier = compScore >= 70.0 && compScore < 86.0;
+      else if (tierFilter === 'tier3') matchesTier = compScore >= 55.0 && compScore < 70.0;
+      else if (tierFilter === 'tier4') matchesTier = compScore < 55.0;
 
       const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
       const matchesField = fieldFilter === 'all' || app.academicData?.fieldOfStudyCategory === fieldFilter;
@@ -173,7 +173,7 @@ export const CommitteeDashboard: React.FC<CommitteeDashboardProps> = ({
             <Flame className="w-4 h-4 text-red-400" />
           </div>
           <div className="text-2xl font-black text-red-400 font-mono mt-1">{stats.tier1Count}</div>
-          <p className="text-[11px] text-neutral-400 mt-1">Score ≥ 80.0 (Priority 1)</p>
+          <p className="text-[11px] text-neutral-400 mt-1">Score ≥ 86.0 (Priority 1)</p>
         </div>
 
         <div className="p-4 rounded-2xl bg-neutral-900/90 border border-neutral-800/80 shadow-md">
@@ -216,10 +216,10 @@ export const CommitteeDashboard: React.FC<CommitteeDashboardProps> = ({
             className="px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-neutral-300 text-xs focus:outline-hidden focus:border-orange-500"
           >
             <option value="all">All Equity Tiers</option>
-            <option value="tier1">Tier 1: Critical High Need (≥80)</option>
-            <option value="tier2">Tier 2: High Merit & Need (65-79)</option>
-            <option value="tier3">Tier 3: Moderate (50-64)</option>
-            <option value="tier4">Tier 4: Borderline (&lt;50)</option>
+            <option value="tier1">Tier 1: Critical High Need (≥86)</option>
+            <option value="tier2">Tier 2: High Merit & Need (70-85.9)</option>
+            <option value="tier3">Tier 3: Moderate Support (55-69.9)</option>
+            <option value="tier4">Tier 4: Standard / Borderline (&lt;55)</option>
           </select>
 
           {/* Status Filter */}
@@ -325,9 +325,9 @@ export const CommitteeDashboard: React.FC<CommitteeDashboardProps> = ({
                           <div>
                             <p className="font-bold text-neutral-100 flex items-center gap-1.5">
                               {candidateLabel}
-                              {compScore >= 80 && (
+                              {compScore >= 86.0 && (
                                 <span className="text-[10px] px-1.5 py-0.2 rounded bg-red-500/20 text-red-400 font-bold border border-red-500/30">
-                                  Tier 1
+                                  Tier 1 (Critical)
                                 </span>
                               )}
                             </p>
@@ -342,12 +342,12 @@ export const CommitteeDashboard: React.FC<CommitteeDashboardProps> = ({
                       <td className="py-4 px-4 text-center">
                         <div className="inline-flex flex-col items-center">
                           <div className={`px-2.5 py-1 rounded-xl font-mono font-black text-sm border ${
-                            compScore >= 80
+                            compScore >= 86.0
+                              ? 'bg-red-950/40 text-red-400 border-red-500/40'
+                              : compScore >= 70.0
                               ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/40'
-                              : compScore >= 65
+                              : compScore >= 55.0
                               ? 'bg-orange-950/40 text-orange-400 border-orange-500/40'
-                              : compScore >= 50
-                              ? 'bg-amber-950/40 text-amber-400 border-amber-500/40'
                               : 'bg-neutral-800 text-neutral-400 border-neutral-700'
                           }`}>
                             {compScore.toFixed(1)}

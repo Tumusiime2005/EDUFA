@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   School,
   IdCard,
+  Lock,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { ApplicationDetailModal } from './ApplicationDetailModal.tsx';
@@ -125,18 +126,36 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            onClick={onOpenNewApplicationModal}
-            className="px-5 py-3 rounded-2xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs shadow-lg shadow-orange-600/30 transition-all flex items-center gap-2 cursor-pointer shrink-0"
-          >
-            <PlusCircle className="w-4 h-4" />
-            Submit Bursary Dossier
-          </button>
+          {userApps.length > 0 ? (
+            <div className="px-4 py-2.5 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 font-bold text-xs flex items-center gap-2 shadow-inner">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <span>Dossier Submitted (1 of 1 Max)</span>
+            </div>
+          ) : (
+            <button
+              onClick={onOpenNewApplicationModal}
+              className="px-5 py-3 rounded-2xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs shadow-lg shadow-orange-600/30 transition-all flex items-center gap-2 cursor-pointer shrink-0"
+            >
+              <PlusCircle className="w-4 h-4" />
+              Submit Bursary Dossier
+            </button>
+          )}
         </div>
       </div>
 
       {activeApp ? (
         <div className="space-y-6">
+          {/* One dossier per applicant policy banner */}
+          <div className="p-3.5 rounded-2xl bg-neutral-900/90 border border-neutral-800 text-xs text-neutral-300 flex items-start sm:items-center gap-2.5 shadow-sm">
+            <Lock className="w-4 h-4 text-orange-400 shrink-0 mt-0.5 sm:mt-0" />
+            <div>
+              <span className="font-semibold text-neutral-200">Single Dossier Policy: </span>
+              <span className="text-neutral-400">
+                Your official application (#Dossier {activeApp.id}) is successfully recorded. Each applicant account is strictly restricted to one dossier submission to ensure equal consideration across all candidates.
+              </span>
+            </div>
+          </div>
+
           {/* Active Application Status Banner */}
           <div className="p-6 rounded-2xl bg-neutral-900 border border-neutral-800 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-neutral-800">

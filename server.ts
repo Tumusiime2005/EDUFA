@@ -208,6 +208,20 @@ app.post('/api/applications', async (req: Request, res: Response) => {
       }
     }
 
+    // Strict Limit: One dossier per applicant account. No duplicate submissions permitted.
+    if (targetId) {
+      const existingDossier = await db
+        .select()
+        .from(applications)
+        .where(eq(applications.applicantId, targetId));
+
+      if (existingDossier.length > 0) {
+        return res.status(400).json({
+          error: `This applicant account has already submitted an official bursary dossier (#${existingDossier[0].id}). Each applicant account is strictly limited to one application dossier.`,
+        });
+      }
+    }
+
     const result = await createApplicationRecord({
       applicantId: targetId,
       financialData,
