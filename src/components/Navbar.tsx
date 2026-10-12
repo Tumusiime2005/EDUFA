@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { NotificationCenter } from './NotificationCenter.tsx';
+import { UgandaScholarshipLogo } from './UgandaScholarshipLogo.tsx';
 
 interface NavbarProps {
   onOpenNewApplicationModal: () => void;
@@ -38,22 +39,20 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewApplicationModal }) => 
   return (
     <header className="sticky top-0 z-30 w-full border-b border-neutral-800/80 bg-neutral-950/80 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4">
-        {/* Brand identity */}
+        {/* Brand identity with Uganda Scholarship Fairness Logo */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-linear-to-br from-orange-500 to-orange-700 flex items-center justify-center shadow-md shadow-orange-600/30 ring-1 ring-orange-400/40">
-            <Scale className="w-5 h-5 text-white" />
-          </div>
+          <UgandaScholarshipLogo size="md" className="shadow-lg shadow-orange-600/20" />
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xl font-extrabold tracking-tight text-white font-sans">
+              <span className="text-lg font-black tracking-tight text-white font-sans">
                 EDU<span className="text-orange-500">FA</span>
               </span>
               <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/20">
-                Fairness Engine v2.4
+                Uganda Fairness
               </span>
             </div>
-            <p className="text-[11px] text-neutral-400 hidden sm:block">
-              Bursary & Sponsorship Allocation Scorer
+            <p className="text-[11px] text-neutral-400 hidden sm:block font-medium">
+              Uganda Scholarship Fairness Board
             </p>
           </div>
         </div>

@@ -15,6 +15,7 @@ import {
   Scale,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
+import { UgandaScholarshipLogo } from './UgandaScholarshipLogo.tsx';
 
 export const InstitutionalAuthGate: React.FC = () => {
   const { loginUserAccount, registerUserAccount, signInWithGoogle } = useAuth();
@@ -104,19 +105,23 @@ export const InstitutionalAuthGate: React.FC = () => {
   return (
     <div className="min-h-[85vh] flex items-center justify-center py-6 px-4 sm:px-6">
       <div className="w-full max-w-xl bg-neutral-900 border border-neutral-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
-        {/* Brand Banner */}
+        {/* Brand Banner with Uganda Scholarship Fairness Logo */}
         <div className="p-6 sm:p-8 bg-gradient-to-br from-neutral-950 via-neutral-900 to-orange-950/40 border-b border-neutral-800 text-center relative overflow-hidden">
           <div className="absolute top-0 right-0 transform translate-x-8 -translate-y-8 w-40 h-40 bg-orange-600/10 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center mx-auto shadow-lg shadow-orange-600/30 ring-1 ring-orange-400/40 mb-3.5">
-            <Scale className="w-7 h-7 text-white" />
+          <div className="flex justify-center mb-4">
+            <UgandaScholarshipLogo size="xl" className="shadow-2xl shadow-orange-600/30 ring-4 ring-amber-500/20" />
+          </div>
+
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-[11px] font-bold text-amber-400 uppercase tracking-widest mb-2">
+            Republic of Uganda • Scholarship Board
           </div>
 
           <h2 className="text-2xl font-black text-white tracking-tight">
-            EDU<span className="text-orange-500">FA</span> Institutional Access Gate
+            Uganda Scholarship Fairness Board
           </h2>
           <p className="text-xs text-neutral-400 mt-1.5 max-w-md mx-auto leading-relaxed">
-            Please sign in to verify your clearance level. Administrators access the Committee Review Room; Applicants access the Bursary Application Portal. All non-assigned options lock upon sign in.
+            Institutional Clearance & Verification Gate. Administrators access the Bursary Review Room; Applicants access the Candidate Dossier Portal.
           </p>
         </div>
 

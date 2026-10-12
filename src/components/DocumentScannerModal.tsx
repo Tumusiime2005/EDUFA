@@ -16,6 +16,7 @@ import {
   IdCard,
   Lock,
 } from 'lucide-react';
+import { UgandaScholarshipLogo } from './UgandaScholarshipLogo.tsx';
 
 interface DocumentScannerModalProps {
   isOpen: boolean;
@@ -492,9 +493,7 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
         {/* Modal Header */}
         <div className="p-5 border-b border-neutral-800 bg-neutral-950/80 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-orange-600/20 border border-orange-500/40 flex items-center justify-center text-orange-500 font-bold">
-              <Scan className="w-5 h-5" />
-            </div>
+            <UgandaScholarshipLogo size="sm" className="shadow-md" />
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
@@ -505,7 +504,7 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
                 </span>
               </div>
               <p className="text-xs text-neutral-400">
-                Scanning: <span className="text-neutral-200 font-medium">{documentTitle}</span>
+                Uganda Scholarship Fairness • <span className="text-neutral-200 font-medium">{documentTitle}</span>
               </p>
             </div>
           </div>

@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { ApplicationDetailModal } from './ApplicationDetailModal.tsx';
+import { UgandaScholarshipLogo } from './UgandaScholarshipLogo.tsx';
 
 interface CommitteeDashboardProps {
   applications: any[];
@@ -103,19 +104,22 @@ export const CommitteeDashboard: React.FC<CommitteeDashboardProps> = ({
     <div className="space-y-8">
       {/* Committee Hero & Anonymized Mode Banner */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-linear-to-r from-orange-950/40 via-neutral-900 to-neutral-950 p-6 rounded-3xl border border-orange-500/30 shadow-xl shadow-orange-950/10">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-full bg-orange-600 text-white font-extrabold text-[10px] uppercase tracking-wider">
-              Committee Oversight Room
-            </span>
-            <span className="text-xs text-neutral-400">System Registry Synchronized</span>
+        <div className="flex items-center gap-4">
+          <UgandaScholarshipLogo size="lg" className="shadow-xl shadow-orange-600/30" />
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="px-2.5 py-0.5 rounded-full bg-orange-600 text-white font-extrabold text-[10px] uppercase tracking-wider">
+                Committee Oversight Room
+              </span>
+              <span className="text-xs text-neutral-400">Uganda Scholarship Fairness Board</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+              Fairness Allocation Engine
+            </h1>
+            <p className="text-xs sm:text-sm text-neutral-300 mt-1 max-w-2xl">
+              Multi-dimensional objective evaluation neutralizing personal bias across 4 transparent pillars: Financial Need (35%), Academic Grit (25%), Alignment (20%), and Sustainability (20%).
+            </p>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            Fairness Allocation Engine
-          </h1>
-          <p className="text-xs sm:text-sm text-neutral-300 mt-1 max-w-2xl">
-            Multi-dimensional objective evaluation neutralizing personal bias across 4 transparent pillars: Financial Need (35%), Academic Grit (25%), Alignment (20%), and Sustainability (20%).
-          </p>
         </div>
 
         {/* Anonymized Review Mode Feature Card */}

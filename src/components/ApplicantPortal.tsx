@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { ApplicationDetailModal } from './ApplicationDetailModal.tsx';
+import { UgandaScholarshipLogo } from './UgandaScholarshipLogo.tsx';
 
 interface ApplicantPortalProps {
   applications: any[];
@@ -110,19 +111,22 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({
     <div className="space-y-8">
       {/* Applicant Welcome Header */}
       <div className="bg-gradient-to-r from-orange-950/40 via-neutral-900 to-neutral-950 p-6 sm:p-8 rounded-3xl border border-orange-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-xl">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="px-2.5 py-0.5 rounded-full bg-orange-600 text-white font-extrabold text-[10px] uppercase tracking-wider">
-              Applicant Portal
-            </span>
-            <span className="text-xs text-neutral-400">Authenticated Student Account</span>
+        <div className="flex items-center gap-4">
+          <UgandaScholarshipLogo size="lg" className="shadow-xl shadow-orange-600/30" />
+          <div>
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="px-2.5 py-0.5 rounded-full bg-orange-600 text-white font-extrabold text-[10px] uppercase tracking-wider">
+                Applicant Portal
+              </span>
+              <span className="text-xs text-neutral-400">Uganda Scholarship Fairness</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+              Welcome, {currentUser?.profile?.fullName || 'Scholar'}
+            </h1>
+            <p className="text-xs sm:text-sm text-neutral-300 mt-1 max-w-xl">
+              Submit your bursary dossier, verify academic documents with optical scanning, and monitor institutional committee decisions.
+            </p>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            Welcome, {currentUser?.profile?.fullName || 'Scholar'}
-          </h1>
-          <p className="text-xs sm:text-sm text-neutral-300 mt-1 max-w-xl">
-            Submit your bursary application, track verified institutional credentials, and receive administrative feedback after verification.
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">

@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { db } from './src/db/index.ts';
-import { users, profiles, notifications } from './src/db/schema.ts';
+import { users, profiles, notifications, applications } from './src/db/schema.ts';
 import { eq, or } from 'drizzle-orm';
 import {
   createApplicationRecord,

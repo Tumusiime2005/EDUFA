@@ -40,6 +40,7 @@ import {
   LevelCompletionProof,
 } from '../lib/scoring-engine.ts';
 import { DocumentScannerModal } from './DocumentScannerModal.tsx';
+import { UgandaScholarshipLogo } from './UgandaScholarshipLogo.tsx';
 
 interface NewApplicationModalProps {
   isOpen: boolean;
@@ -507,14 +508,12 @@ export const NewApplicationModal: React.FC<NewApplicationModalProps> = ({
     <>
       <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6">
         <div className="relative w-full max-w-5xl bg-neutral-900 border border-neutral-800 rounded-3xl shadow-2xl overflow-hidden my-auto max-h-[95vh] flex flex-col">
-          {/* Modal Header */}
+          {/* Modal Header with Official Logo */}
           <div className="p-5 sm:p-6 border-b border-neutral-800 bg-neutral-950/80 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-orange-600/20 border border-orange-500/40 flex items-center justify-center text-orange-500 font-bold">
-                <Sparkles className="w-5 h-5" />
-              </div>
+            <div className="flex items-center gap-3.5">
+              <UgandaScholarshipLogo size="md" className="shadow-lg shadow-orange-600/20" />
               <div>
-                <h3 className="text-lg font-bold text-white tracking-tight">New Bursary & Sponsorship Dossier</h3>
+                <h3 className="text-lg font-bold text-white tracking-tight">Uganda Scholarship Fairness Dossier</h3>
                 <p className="text-xs text-neutral-400">Step {step} of 5 — Multi-Pillar Objective Fairness Evaluation</p>
               </div>
             </div>

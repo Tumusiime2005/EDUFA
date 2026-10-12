@@ -15,6 +15,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
+import { UgandaScholarshipLogo } from './UgandaScholarshipLogo.tsx';
 
 export const AuthModal: React.FC = () => {
   const {
@@ -122,20 +123,8 @@ export const AuthModal: React.FC = () => {
       <div className="relative w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl shadow-2xl overflow-hidden my-auto flex flex-col">
         {/* Header */}
         <div className="p-5 border-b border-neutral-800 bg-neutral-950/70 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold border ${
-              activeTab === 'admin'
-                ? 'bg-amber-600/20 border-amber-500/30 text-amber-400'
-                : 'bg-orange-600/20 border-orange-500/30 text-orange-400'
-            }`}>
-              {activeTab === 'admin' ? (
-                <Shield className="w-5 h-5 text-amber-400" />
-              ) : activeTab === 'register' ? (
-                <UserPlus className="w-5 h-5 text-orange-400" />
-              ) : (
-                <LogIn className="w-5 h-5 text-orange-400" />
-              )}
-            </div>
+          <div className="flex items-center gap-3">
+            <UgandaScholarshipLogo size="sm" className="shadow-md" />
             <div>
               <h3 className="text-base font-bold text-white tracking-tight">
                 {activeTab === 'login' && 'Sign In to Account'}
@@ -143,7 +132,7 @@ export const AuthModal: React.FC = () => {
                 {activeTab === 'admin' && 'Create Committee Member'}
               </h3>
               <p className="text-[11px] text-neutral-400">
-                {activeTab === 'login' && 'System verifies whether you are an Admin or Applicant'}
+                {activeTab === 'login' && 'Uganda Scholarship Fairness Board Authentication'}
                 {activeTab === 'register' && 'Scholar Registration for Bursary Application'}
                 {activeTab === 'admin' && 'Authorized Committee & Administrative Clearance'}
               </p>

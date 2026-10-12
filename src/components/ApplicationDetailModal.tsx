@@ -25,6 +25,7 @@ import {
   Scan,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
+import { UgandaScholarshipLogo } from './UgandaScholarshipLogo.tsx';
 
 interface ApplicationDetailModalProps {
   application: any | null;
@@ -132,16 +133,16 @@ export const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6">
       <div className="relative w-full max-w-4xl bg-neutral-900 border border-neutral-800 rounded-2xl shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col">
-        {/* Header */}
+        {/* Header with Institutional Branding */}
         <div className="p-5 sm:p-6 border-b border-neutral-800 bg-neutral-950/70 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg border ${
-              anonymizedMode
-                ? 'bg-amber-950/50 border-amber-500/40 text-amber-300'
-                : 'bg-orange-600/20 border-orange-500/40 text-orange-400'
-            }`}>
-              {anonymizedMode ? <EyeOff className="w-6 h-6 text-amber-400" /> : <GraduationCap className="w-6 h-6 text-orange-400" />}
-            </div>
+            {anonymizedMode ? (
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-lg border bg-amber-950/50 border-amber-500/40 text-amber-300">
+                <EyeOff className="w-6 h-6 text-amber-400" />
+              </div>
+            ) : (
+              <UgandaScholarshipLogo size="lg" className="shadow-lg shadow-orange-600/20" />
+            )}
             <div>
               <div className="flex items-center gap-2.5 flex-wrap">
                 <h3 className="text-lg font-bold text-white tracking-tight">{displayName}</h3>
