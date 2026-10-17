@@ -13,7 +13,7 @@ import {
   getUserNotifications,
   markNotificationAsRead,
 } from './src/db/applications.ts';
-import { getOrCreateUser, getUserWithProfile, registerApplicantUser, loginUser } from './src/db/users.ts';
+import { getOrCreateUser, getUserWithProfile, registerApplicantUser, loginUser, getAllAdmins } from './src/db/users.ts';
 import { calculateFairnessScore, validateNextOfKinNIN } from './src/lib/scoring-engine.ts';
 
 dotenv.config();
@@ -96,6 +96,39 @@ app.get('/api/auth/verify', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Verify error:', error);
     res.status(500).json({ error: error.message || 'Verification failed' });
+  }
+});
+
+// List all Committee Administrators (Admins Page only)
+app.get('/api/admin/admins', async (_req: Request, res: Response) => {
+  try {
+    const adminList = await getAllAdmins();
+    res.json(adminList);
+  } catch (error: any) {
+    console.error('Error retrieving admins:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch admins list' });
+  }
+});
+
+// Assign a New Administrator (Available only within the Admins Page)
+app.post('/api/admin/assign', async (req: Request, res: Response) => {
+  try {
+    const { email, password, fullName, phone, region } = req.body;
+    if (!email || !fullName) {
+      return res.status(400).json({ error: 'Official email and full legal name are required.' });
+    }
+    const user = await registerApplicantUser({
+      email,
+      password,
+      fullName,
+      phone,
+      region: region || 'Central Region (Kampala)',
+      role: 'committee',
+    });
+    res.status(201).json({ success: true, user, message: 'New Committee Administrator assigned successfully.' });
+  } catch (error: any) {
+    console.error('Error assigning admin:', error);
+    res.status(400).json({ error: error.message || 'Failed to assign administrator' });
   }
 });
 

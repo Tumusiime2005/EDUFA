@@ -154,3 +154,28 @@ export async function getUserWithProfile(userId: number) {
     throw new Error('Failed to fetch user profile', { cause: error });
   }
 }
+
+export async function getAllAdmins() {
+  try {
+    const adminRows = await db
+      .select({
+        id: users.id,
+        uid: users.uid,
+        email: users.email,
+        role: users.role,
+        createdAt: users.createdAt,
+        fullName: profiles.fullName,
+        phone: profiles.phone,
+        region: profiles.region,
+      })
+      .from(users)
+      .leftJoin(profiles, eq(users.id, profiles.userId))
+      .where(or(eq(users.role, 'committee'), eq(users.role, 'admin')));
+
+    return adminRows;
+  } catch (error) {
+    console.error('Error fetching all admins:', error);
+    throw new Error('Failed to fetch admin accounts', { cause: error });
+  }
+}
+

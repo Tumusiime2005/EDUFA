@@ -19,7 +19,7 @@ import { UgandaScholarshipLogo } from './UgandaScholarshipLogo.tsx';
 
 export const InstitutionalAuthGate: React.FC = () => {
   const { loginUserAccount, registerUserAccount, signInWithGoogle } = useAuth();
-  const [activeTab, setActiveTab] = useState<'admin_login' | 'applicant_login' | 'create_committee' | 'register_applicant'>('admin_login');
+  const [activeTab, setActiveTab] = useState<'admin_login' | 'applicant_login' | 'register_applicant'>('admin_login');
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -78,8 +78,6 @@ export const InstitutionalAuthGate: React.FC = () => {
       return;
     }
 
-    const targetRole = activeTab === 'create_committee' ? 'committee' : 'applicant';
-
     setSubmitting(true);
     try {
       await registerUserAccount({
@@ -88,15 +86,11 @@ export const InstitutionalAuthGate: React.FC = () => {
         phone: phone.trim(),
         region,
         password,
-        role: targetRole,
+        role: 'applicant',
       });
-      setSuccessMsg(
-        targetRole === 'committee'
-          ? 'Committee administrator created successfully! Opening Committee Portal...'
-          : 'Applicant account created successfully! Opening Applicant Portal...'
-      );
+      setSuccessMsg('Applicant account created successfully! Opening Applicant Portal...');
     } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to create account.');
+      setErrorMsg(err.message || 'Failed to create applicant account.');
     } finally {
       setSubmitting(false);
     }
@@ -125,8 +119,8 @@ export const InstitutionalAuthGate: React.FC = () => {
           </p>
         </div>
 
-        {/* Tab Switcher - 4 Clear Options */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 border-b border-neutral-800 bg-neutral-950/70 text-[11px] font-semibold text-center">
+        {/* Tab Switcher - 3 Strict Options */}
+        <div className="grid grid-cols-3 border-b border-neutral-800 bg-neutral-950/70 text-[11px] font-semibold text-center">
           <button
             type="button"
             onClick={() => {
@@ -176,23 +170,6 @@ export const InstitutionalAuthGate: React.FC = () => {
           >
             <UserPlus className="w-4 h-4 text-orange-400" />
             <span>New Applicant</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('create_committee');
-              setErrorMsg('');
-              setSuccessMsg('');
-            }}
-            className={`py-3.5 transition-all cursor-pointer border-b-2 flex flex-col items-center justify-center gap-1 ${
-              activeTab === 'create_committee'
-                ? 'border-amber-500 text-amber-400 font-bold bg-amber-500/10'
-                : 'border-transparent text-neutral-400 hover:text-neutral-200'
-            }`}
-          >
-            <Shield className="w-4 h-4 text-amber-400" />
-            <span>New Admin</span>
           </button>
         </div>
 
@@ -316,26 +293,19 @@ export const InstitutionalAuthGate: React.FC = () => {
             </form>
           )}
 
-          {/* TAB 3 & 4: REGISTRATION */}
-          {(activeTab === 'create_committee' || activeTab === 'register_applicant') && (
+          {/* TAB 3: APPLICANT REGISTRATION ONLY */}
+          {activeTab === 'register_applicant' && (
             <form onSubmit={handleRegister} className="space-y-3.5 text-xs">
               <div className="p-3 rounded-xl bg-neutral-950/90 border border-neutral-800 text-[11px] leading-relaxed">
-                {activeTab === 'create_committee' ? (
-                  <span className="text-amber-300 font-medium flex items-center gap-1.5">
-                    <Shield className="w-4 h-4 text-amber-400 shrink-0" />
-                    Create a new Bursary Committee Member account with evaluation clearance.
-                  </span>
-                ) : (
-                  <span className="text-orange-300 font-medium flex items-center gap-1.5">
-                    <GraduationCap className="w-4 h-4 text-orange-400 shrink-0" />
-                    Register a new student applicant account to submit bursary dossiers.
-                  </span>
-                )}
+                <span className="text-orange-300 font-medium flex items-center gap-1.5">
+                  <GraduationCap className="w-4 h-4 text-orange-400 shrink-0" />
+                  Register a new student applicant account to submit bursary dossiers.
+                </span>
               </div>
 
               <div>
                 <label className="block text-neutral-300 font-medium mb-1">
-                  {activeTab === 'create_committee' ? 'Committee Member Full Name' : 'Applicant Full Legal Name'}
+                  Applicant Full Legal Name
                 </label>
                 <div className="relative">
                   <User className="w-4 h-4 text-neutral-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -344,7 +314,7 @@ export const InstitutionalAuthGate: React.FC = () => {
                     required
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    placeholder={activeTab === 'create_committee' ? 'e.g. Dr. Kasumba Robert' : 'e.g. Mukasa David'}
+                    placeholder="e.g. Mukasa David"
                     className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-neutral-100 placeholder:text-neutral-500 focus:outline-hidden focus:border-orange-500 text-xs"
                   />
                 </div>
@@ -352,7 +322,7 @@ export const InstitutionalAuthGate: React.FC = () => {
 
               <div>
                 <label className="block text-neutral-300 font-medium mb-1">
-                  {activeTab === 'create_committee' ? 'Institutional Email' : 'Email Address'}
+                  Email Address
                 </label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-neutral-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -361,7 +331,7 @@ export const InstitutionalAuthGate: React.FC = () => {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder={activeTab === 'create_committee' ? 'e.g. evaluator@dragonsenterprises.com' : 'e.g. student@gmail.com'}
+                    placeholder="e.g. student@gmail.com"
                     className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-neutral-100 placeholder:text-neutral-500 focus:outline-hidden focus:border-orange-500 text-xs"
                   />
                 </div>
@@ -435,18 +405,10 @@ export const InstitutionalAuthGate: React.FC = () => {
               <button
                 type="submit"
                 disabled={submitting}
-                className={`w-full mt-2 py-3.5 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 ${
-                  activeTab === 'create_committee'
-                    ? 'bg-amber-600 hover:bg-amber-500 shadow-amber-600/30'
-                    : 'bg-orange-600 hover:bg-orange-500 shadow-orange-600/30'
-                }`}
+                className="w-full mt-2 py-3.5 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl text-xs shadow-md shadow-orange-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
-                {activeTab === 'create_committee' ? <Shield className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
-                {submitting
-                  ? 'Processing...'
-                  : activeTab === 'create_committee'
-                  ? 'Register Committee Administrator'
-                  : 'Complete Applicant Registration'}
+                <UserPlus className="w-4 h-4" />
+                {submitting ? 'Creating Applicant Account...' : 'Complete Applicant Registration'}
               </button>
             </form>
           )}

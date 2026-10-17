@@ -22,6 +22,7 @@ export const AuthModal: React.FC = () => {
     isAuthModalOpen,
     setIsAuthModalOpen,
     authModalTab,
+    currentUser,
     registerUserAccount,
     loginUserAccount,
     signInWithGoogle,
@@ -45,11 +46,16 @@ export const AuthModal: React.FC = () => {
   const [loginPassword, setLoginPassword] = useState('');
 
   React.useEffect(() => {
-    setActiveTab(authModalTab);
+    const isPrivileged = currentUser && (currentUser.role === 'committee' || currentUser.role === 'admin');
+    if (authModalTab === 'admin' && !isPrivileged) {
+      setActiveTab('login');
+    } else {
+      setActiveTab(authModalTab);
+    }
     setErrorMsg('');
     setSuccessMsg('');
     setLoginPassword('');
-  }, [authModalTab]);
+  }, [authModalTab, currentUser]);
 
   if (!isAuthModalOpen) return null;
 
@@ -146,8 +152,8 @@ export const AuthModal: React.FC = () => {
           </button>
         </div>
 
-        {/* Tab Selector */}
-        <div className="grid grid-cols-3 border-b border-neutral-800 bg-neutral-950/40 text-xs text-center font-medium">
+        {/* Tab Selector - Admin tab visible exclusively to authorized committee admins */}
+        <div className={`grid ${currentUser && (currentUser.role === 'committee' || currentUser.role === 'admin') ? 'grid-cols-3' : 'grid-cols-2'} border-b border-neutral-800 bg-neutral-950/40 text-xs text-center font-medium`}>
           <button
             type="button"
             onClick={() => {
@@ -180,22 +186,24 @@ export const AuthModal: React.FC = () => {
             <GraduationCap className="w-3.5 h-3.5" />
             Applicant
           </button>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('admin');
-              setErrorMsg('');
-              setSuccessMsg('');
-            }}
-            className={`py-3 transition-colors cursor-pointer border-b-2 flex items-center justify-center gap-1.5 ${
-              activeTab === 'admin'
-                ? 'border-amber-500 text-amber-400 font-bold bg-amber-500/5'
-                : 'border-transparent text-neutral-400 hover:text-neutral-200'
-            }`}
-          >
-            <Shield className="w-3.5 h-3.5" />
-            Committee
-          </button>
+          {currentUser && (currentUser.role === 'committee' || currentUser.role === 'admin') && (
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('admin');
+                setErrorMsg('');
+                setSuccessMsg('');
+              }}
+              className={`py-3 transition-colors cursor-pointer border-b-2 flex items-center justify-center gap-1.5 ${
+                activeTab === 'admin'
+                  ? 'border-amber-500 text-amber-400 font-bold bg-amber-500/5'
+                  : 'border-transparent text-neutral-400 hover:text-neutral-200'
+              }`}
+            >
+              <Shield className="w-3.5 h-3.5" />
+              Committee Admin
+            </button>
+          )}
         </div>
 
         {/* Modal Body */}

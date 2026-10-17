@@ -22,6 +22,7 @@ import {
 import { useAuth } from '../context/AuthContext.tsx';
 import { ApplicationDetailModal } from './ApplicationDetailModal.tsx';
 import { UgandaScholarshipLogo } from './UgandaScholarshipLogo.tsx';
+import { AssignAdminModal } from './AssignAdminModal.tsx';
 
 interface CommitteeDashboardProps {
   applications: any[];
@@ -41,6 +42,7 @@ export const CommitteeDashboard: React.FC<CommitteeDashboardProps> = ({
   const [fieldFilter, setFieldFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'score_desc' | 'score_asc' | 'need_desc' | 'academic_desc' | 'recent'>('score_desc');
   const [selectedApp, setSelectedApp] = useState<any | null>(null);
+  const [isAssignAdminOpen, setIsAssignAdminOpen] = useState(false);
 
   // KPIs
   const stats = useMemo(() => {
@@ -122,32 +124,44 @@ export const CommitteeDashboard: React.FC<CommitteeDashboardProps> = ({
           </div>
         </div>
 
-        {/* Anonymized Review Mode Feature Card */}
-        <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-neutral-950/80 border border-neutral-800">
-          <div className={`p-2.5 rounded-xl ${anonymizedMode ? 'bg-amber-500/20 text-amber-400' : 'bg-neutral-800 text-neutral-400'}`}>
-            <EyeOff className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-neutral-100">Anonymized Review Mode</span>
-              <span className={`text-[10px] font-bold px-2 py-0.2 rounded-full ${anonymizedMode ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-neutral-800 text-neutral-400'}`}>
-                {anonymizedMode ? 'ACTIVE' : 'OFF'}
-              </span>
-            </div>
-            <p className="text-[11px] text-neutral-400 max-w-xs">
-              Masks applicant names, contact, and demographics to eliminate unconscious affinity bias.
-            </p>
-          </div>
+        {/* Admin Actions Group - Strictly in Admins Page */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          {/* Assign New Admin CTA */}
           <button
-            onClick={() => setAnonymizedMode(!anonymizedMode)}
-            className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
-              anonymizedMode
-                ? 'bg-amber-600 hover:bg-amber-500 text-white'
-                : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300'
-            }`}
+            onClick={() => setIsAssignAdminOpen(true)}
+            className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-lg shadow-amber-600/30 transition-all cursor-pointer border border-amber-400/30 shrink-0"
           >
-            {anonymizedMode ? 'Disable' : 'Enable'}
+            <Shield className="w-4 h-4 text-amber-200" />
+            <span>+ Assign New Admin</span>
           </button>
+
+          {/* Anonymized Review Mode Feature Card */}
+          <div className="flex items-center gap-3 p-3 rounded-2xl bg-neutral-950/80 border border-neutral-800">
+            <div className={`p-2.5 rounded-xl ${anonymizedMode ? 'bg-amber-500/20 text-amber-400' : 'bg-neutral-800 text-neutral-400'}`}>
+              <EyeOff className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-neutral-100">Anonymized Review</span>
+                <span className={`text-[10px] font-bold px-2 py-0.2 rounded-full ${anonymizedMode ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-neutral-800 text-neutral-400'}`}>
+                  {anonymizedMode ? 'ACTIVE' : 'OFF'}
+                </span>
+              </div>
+              <p className="text-[11px] text-neutral-400 max-w-xs">
+                Masks applicant names and demographics.
+              </p>
+            </div>
+            <button
+              onClick={() => setAnonymizedMode(!anonymizedMode)}
+              className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                anonymizedMode
+                  ? 'bg-amber-600 hover:bg-amber-500 text-white'
+                  : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300'
+              }`}
+            >
+              {anonymizedMode ? 'Disable' : 'Enable'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -470,6 +484,15 @@ export const CommitteeDashboard: React.FC<CommitteeDashboardProps> = ({
           }}
         />
       )}
+
+      {/* Assign Administrator Modal - Accessible strictly from the Admins Page */}
+      <AssignAdminModal
+        isOpen={isAssignAdminOpen}
+        onClose={() => setIsAssignAdminOpen(false)}
+        onAdminAssigned={() => {
+          onRefresh();
+        }}
+      />
     </div>
   );
 };
