@@ -324,10 +324,10 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({
                     <School className="w-3 h-3 text-orange-400" /> Previous School
                   </span>
                   <p className="text-neutral-200 font-medium truncate">
-                    {activeApp.academicData?.levelCompletionProof?.previousSchoolName || "St. Mary's College Kisubi"}
+                    {activeApp.academicData?.levelCompletionProof?.previousSchoolName || 'Not recorded'}
                   </p>
                   <span className="text-[11px] font-mono text-emerald-400 font-bold block">
-                    ID: {activeApp.academicData?.levelCompletionProof?.previousSchoolStudentId || 'Verified'}
+                    ID: {activeApp.academicData?.levelCompletionProof?.previousSchoolStudentId || 'Recorded'}
                   </span>
                 </div>
 
@@ -339,7 +339,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({
                     {activeApp.academicData?.levelCompletionProof?.levelCompleted || 'UACE / A-Level'}
                   </p>
                   <span className="text-[11px] text-neutral-400 block font-mono">
-                    Index: {activeApp.academicData?.levelCompletionProof?.indexOrRegNumber || 'U0023/514'}
+                    Index: {activeApp.academicData?.levelCompletionProof?.indexOrRegNumber || 'Recorded'}
                   </span>
                 </div>
 

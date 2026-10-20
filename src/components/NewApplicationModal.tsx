@@ -86,15 +86,8 @@ export const NewApplicationModal: React.FC<NewApplicationModalProps> = ({
     siblingsInHigherEducation: 1,
     householdStructure: 'dual_parent_low_earning',
     geographicBackground: 'deep_rural',
-    documentsVerified: true,
-    documentsList: [
-      {
-        id: 'doc-1',
-        type: 'LC1 Local Council Recommendation Letter',
-        filename: 'LC1_Recommendation_Official.pdf',
-        status: 'verified',
-      },
-    ],
+    documentsVerified: false,
+    documentsList: [],
   });
 
   // 3. Academic Pillar (25%) & Prior Level Completion Proof
@@ -111,20 +104,20 @@ export const NewApplicationModal: React.FC<NewApplicationModalProps> = ({
     matricOrEntrancePercentile: 85,
   });
 
-  // Prior Level Completion Proof & Previous School Student ID
+  // Prior Level Completion Proof & Previous School Student ID (Recorded directly from applicant scan / entry)
   const [levelCompleted, setLevelCompleted] = useState('Uganda Advanced Certificate of Education (UACE / A-Level)');
-  const [previousSchoolName, setPreviousSchoolName] = useState("St. Mary's College Kisubi");
-  const [previousSchoolStudentId, setPreviousSchoolStudentId] = useState('SMACK-2022-849');
+  const [previousSchoolName, setPreviousSchoolName] = useState('');
+  const [previousSchoolStudentId, setPreviousSchoolStudentId] = useState('');
   const [completionYear, setCompletionYear] = useState('2024');
-  const [indexOrRegNumber, setIndexOrRegNumber] = useState('U0023/514');
-  const [levelDocName, setLevelDocName] = useState('UACE_Official_Pass_Slip.pdf');
+  const [indexOrRegNumber, setIndexOrRegNumber] = useState('');
+  const [levelDocName, setLevelDocName] = useState('');
   const [isLevelDocScanned, setIsLevelDocScanned] = useState(false);
   const [levelDocScanTimestamp, setLevelDocScanTimestamp] = useState<string>('');
   const [levelDocScanPreview, setLevelDocScanPreview] = useState<string>('');
   const [levelDocExtractedDetails, setLevelDocExtractedDetails] = useState<any>(null);
 
   // Income doc scanner state
-  const [incomeDocName, setIncomeDocName] = useState('Household_Payslip_Proof.pdf');
+  const [incomeDocName, setIncomeDocName] = useState('');
   const [isIncomeDocScanned, setIsIncomeDocScanned] = useState(false);
   const [incomeDocScanPreview, setIncomeDocScanPreview] = useState<string>('');
 
@@ -229,110 +222,20 @@ export const NewApplicationModal: React.FC<NewApplicationModalProps> = ({
     }
   };
 
-  // Open Document Scanner
+  // Open Document Scanner (Camera capture or file upload directly from applicant)
   const openScanner = (target: 'level_proof' | 'income_proof') => {
     setScannerTarget(target);
     setIsScannerModalOpen(true);
   };
 
-  // Instant Auto-Scan helper
-  const handleInstantQuickScan = (target: 'level_proof' | 'income_proof') => {
-    const sId = (previousSchoolStudentId || 'SMACK-2022-849').trim().toUpperCase();
-    const sName = (previousSchoolName || "St. Mary's College Kisubi").trim();
-    const idxNo = (indexOrRegNumber || 'U0023/514').trim().toUpperCase();
-    const timestamp = new Date().toLocaleTimeString();
-
-    const canvas = document.createElement('canvas');
-    canvas.width = 1200;
-    canvas.height = 900;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.fillStyle = '#f8fafc';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.strokeStyle = '#cbd5e1';
-      ctx.lineWidth = 4;
-      ctx.strokeRect(30, 30, canvas.width - 60, canvas.height - 60);
-
-      ctx.fillStyle = '#0f172a';
-      ctx.textAlign = 'center';
-      ctx.font = 'bold 26px sans-serif';
-      ctx.fillText(target === 'level_proof' ? 'UGANDA NATIONAL EXAMINATIONS BOARD' : 'LOCAL COUNCIL / REVENUE VERIFICATION', canvas.width / 2, 90);
-      ctx.font = '16px sans-serif';
-      ctx.fillStyle = '#475569';
-      ctx.fillText(target === 'level_proof' ? 'OFFICIAL CERTIFICATE OF LEVEL COMPLETION & PASS SLIP' : 'INCOME CONFORMITY ASSESSMENT RECORD', canvas.width / 2, 120);
-
-      ctx.fillStyle = '#ea580c';
-      ctx.fillRect(80, 140, canvas.width - 160, 4);
-
-      ctx.textAlign = 'left';
-      ctx.font = 'bold 18px monospace';
-      ctx.fillStyle = '#1e293b';
-      ctx.fillText(`INSTITUTION / ISSUER : ${sName.toUpperCase()}`, 100, 190);
-      ctx.fillText(`STUDENT ID NO.       : ${sId.toUpperCase()}`, 100, 230);
-      ctx.fillText(`REGISTRATION / INDEX : ${idxNo.toUpperCase()}`, 100, 270);
-      ctx.fillText(`CANDIDATE NAME       : ${fullName ? fullName.toUpperCase() : 'APPLICANT SCHOLAR'}`, 100, 310);
-      ctx.fillText(`ACADEMIC YEAR        : 2024 (VALIDATED)`, 100, 350);
-
-      // Stamp
-      ctx.save();
-      ctx.translate(canvas.width - 260, 720);
-      ctx.beginPath();
-      ctx.arc(0, 0, 75, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(220, 38, 38, 0.75)';
-      ctx.lineWidth = 4;
-      ctx.stroke();
-      ctx.fillStyle = 'rgba(220, 38, 38, 0.85)';
-      ctx.font = 'bold 12px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('HEADTEACHER OFFICE', 0, -20);
-      ctx.fillText('OFFICIAL STAMP', 0, 0);
-      ctx.fillText('CERTIFIED TRUE COPY', 0, 20);
-      ctx.restore();
-
-      // Watermark band
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
-      ctx.fillRect(0, canvas.height - 52, canvas.width, 52);
-      ctx.fillStyle = '#ea580c';
-      ctx.fillRect(0, canvas.height - 52, 6, 52);
-      ctx.font = 'bold 13px monospace';
-      ctx.fillStyle = '#fdba74';
-      ctx.fillText(`✓ DIGITAL SCANNER VERIFIED • CONFORMITY CONFIRMED`, 24, canvas.height - 30);
-      ctx.font = '11px monospace';
-      ctx.fillStyle = '#cbd5e1';
-      ctx.fillText(`PREVIOUS STUDENT ID: ${sId} • TIMESTAMP: ${timestamp} • STATUS: VALIDATED`, 24, canvas.height - 12);
-
-      const previewUrl = canvas.toDataURL('image/jpeg', 0.92);
-
-      if (target === 'level_proof') {
-        setIsLevelDocScanned(true);
-        setLevelDocScanPreview(previewUrl);
-        setLevelDocName(`Scanned_${sId.replace(/[^a-zA-Z0-9]/g, '_')}_PassSlip.jpg`);
-        setLevelDocScanTimestamp(timestamp);
-        if (!previousSchoolStudentId) setPreviousSchoolStudentId(sId);
-        if (!previousSchoolName) setPreviousSchoolName(sName);
-        setLevelDocExtractedDetails({
-          schoolNameDetected: sName,
-          studentIdDetected: sId,
-          indexNumberDetected: idxNo,
-          officialStampConfirmed: true,
-          ocrConfidence: 99.4,
-          conformityStatus: 'verified_match',
-        });
-      } else {
-        setIsIncomeDocScanned(true);
-        setIncomeDocScanPreview(previewUrl);
-        setIncomeDocName(`Scanned_${sId.replace(/[^a-zA-Z0-9]/g, '_')}_IncomeProof.jpg`);
-      }
-    }
-  };
-
-  // Handle Scan Modal Complete
+  // Handle Scan Modal Complete (recorded directly from applicant)
   const handleScanCompleted = (result: {
     scannedImagePreview: string;
     filename: string;
     scanTimestamp: string;
     studentId?: string;
     schoolName?: string;
+    indexNumber?: string;
     extractedDetails: any;
   }) => {
     if (scannerTarget === 'level_proof') {
@@ -341,16 +244,32 @@ export const NewApplicationModal: React.FC<NewApplicationModalProps> = ({
       setLevelDocName(result.filename);
       setLevelDocScanTimestamp(result.scanTimestamp);
       setLevelDocExtractedDetails(result.extractedDetails);
-      if (result.studentId) {
+      if (result.studentId && result.studentId !== 'ID Recorded from Document') {
         setPreviousSchoolStudentId(result.studentId);
       }
-      if (result.schoolName) {
+      if (result.schoolName && result.schoolName !== 'Academic Institution (Verified)') {
         setPreviousSchoolName(result.schoolName);
+      }
+      if (result.indexNumber || result.extractedDetails?.indexNumberDetected) {
+        setIndexOrRegNumber(result.indexNumber || result.extractedDetails?.indexNumberDetected);
       }
     } else {
       setIsIncomeDocScanned(true);
       setIncomeDocScanPreview(result.scannedImagePreview);
       setIncomeDocName(result.filename);
+      setFinancial((prev) => ({
+        ...prev,
+        documentsVerified: true,
+        documentsList: [
+          ...prev.documentsList.filter((d) => d.type !== 'LC1 Local Council / Household Income Proof'),
+          {
+            id: `doc-${Date.now()}`,
+            type: 'LC1 Local Council / Household Income Proof',
+            filename: result.filename,
+            status: 'verified',
+          },
+        ],
+      }));
     }
   };
 
@@ -913,12 +832,18 @@ export const NewApplicationModal: React.FC<NewApplicationModalProps> = ({
                       )}
                     </div>
 
-                    <div className="flex flex-col sm:flex-row items-center justify-between p-3 rounded-xl bg-neutral-900 border border-neutral-800 gap-3 text-xs">
+                    <div className="flex flex-col sm:flex-row items-center justify-between p-3.5 rounded-xl bg-neutral-900 border border-neutral-800 gap-3 text-xs">
                       <div className="flex items-center gap-3">
-                        <FileText className="w-5 h-5 text-orange-400" />
+                        <FileText className="w-5 h-5 text-orange-400 shrink-0" />
                         <div>
-                          <p className="font-medium text-neutral-200">{incomeDocName}</p>
-                          <p className="text-[10px] text-neutral-500">LC1 Proof / Household Income Verification</p>
+                          <p className="font-medium text-neutral-200">
+                            {incomeDocName || 'No income proof document recorded yet'}
+                          </p>
+                          <p className="text-[10px] text-neutral-500">
+                            {isIncomeDocScanned
+                              ? 'LC1 Local Council / Household Income Proof • Scanned & Authenticated'
+                              : 'Upload or capture LC1 recommendation letter / payslip proof'}
+                          </p>
                         </div>
                       </div>
 
@@ -932,15 +857,6 @@ export const NewApplicationModal: React.FC<NewApplicationModalProps> = ({
                             <Eye className="w-3.5 h-3.5" /> Preview Scan
                           </button>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => handleInstantQuickScan('income_proof')}
-                          className="px-3 py-1.5 rounded-xl bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 border border-orange-500/30 text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all"
-                          title="Instant 1-Click Verification"
-                        >
-                          <Sparkles className="w-3 h-3 text-orange-400" />
-                          1-Click Scan
-                        </button>
                         <button
                           type="button"
                           onClick={() => openScanner('income_proof')}
@@ -1181,15 +1097,17 @@ export const NewApplicationModal: React.FC<NewApplicationModalProps> = ({
 
                           <div>
                             <p className="font-bold text-xs text-neutral-200 flex items-center gap-2">
-                              {levelDocName}
-                              {isLevelDocScanned && (
+                              {levelDocName || 'No academic certificate recorded yet'}
+                              {isLevelDocScanned && previousSchoolStudentId && (
                                 <span className="text-[10px] text-emerald-400 font-mono">
-                                  [ID MATCH: {previousSchoolStudentId}]
+                                  [ID: {previousSchoolStudentId}]
                                 </span>
                               )}
                             </p>
                             <p className="text-[11px] text-neutral-400">
-                              Official UNEB Pass Slip / Level Certificate & Student ID Document
+                              {isLevelDocScanned
+                                ? 'Official UNEB Pass Slip / Level Certificate & Student ID Document • Verified'
+                                : 'Scan with live camera or upload official UNEB pass slip or completion certificate'}
                             </p>
                           </div>
                         </div>
@@ -1207,16 +1125,6 @@ export const NewApplicationModal: React.FC<NewApplicationModalProps> = ({
 
                           <button
                             type="button"
-                            onClick={() => handleInstantQuickScan('level_proof')}
-                            className="px-3.5 py-2.5 rounded-xl bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 border border-orange-500/30 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all"
-                            title="Instant 1-Click Verification using entered details"
-                          >
-                            <Sparkles className="w-3.5 h-3.5 text-orange-400" />
-                            1-Click Auto Scan
-                          </button>
-
-                          <button
-                            type="button"
                             onClick={() => openScanner('level_proof')}
                             className={`flex-1 sm:flex-none px-4 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all ${
                               isLevelDocScanned
@@ -1225,7 +1133,7 @@ export const NewApplicationModal: React.FC<NewApplicationModalProps> = ({
                             }`}
                           >
                             <Scan className="w-4 h-4" />
-                            {isLevelDocScanned ? 'Re-Scan Document' : 'Launch Optical Document Scanner'}
+                            {isLevelDocScanned ? 'Re-Scan Certificate' : 'Launch Optical Document Scanner'}
                           </button>
                         </div>
                       </div>

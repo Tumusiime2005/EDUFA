@@ -563,7 +563,7 @@ export const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
                       <School className="w-3 h-3 text-orange-400" /> Previous School / Institution
                     </span>
                     <span className="font-semibold text-neutral-200">
-                      {levelProof.previousSchoolName || "St. Mary's College Kisubi"}
+                      {levelProof.previousSchoolName || 'Not recorded'}
                     </span>
                   </div>
                   <div>
@@ -572,23 +572,25 @@ export const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
                     </span>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="font-mono font-bold text-emerald-400 tracking-wider">
-                        {levelProof.previousSchoolStudentId || 'SMACK-2022-849'}
+                        {levelProof.previousSchoolStudentId || 'Not recorded'}
                       </span>
-                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                        CONFORMITY OK
-                      </span>
+                      {levelProof.previousSchoolStudentId && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          CONFORMITY OK
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div>
                     <span className="text-neutral-400 block text-[11px]">Completion Year</span>
                     <span className="font-mono font-semibold text-neutral-200">
-                      {levelProof.completionYear || '2024'}
+                      {levelProof.completionYear || 'Recorded in dossier'}
                     </span>
                   </div>
                   <div className="sm:col-span-2">
                     <span className="text-neutral-400 block text-[11px]">Official UNEB / Index Number</span>
                     <span className="font-mono font-bold text-orange-400">
-                      {levelProof.indexOrRegNumber || 'U0023/514'}
+                      {levelProof.indexOrRegNumber || 'Not recorded'}
                     </span>
                   </div>
                 </div>
@@ -611,10 +613,12 @@ export const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
                     )}
                     <div>
                       <span className="font-semibold text-neutral-200 block">
-                        {levelProof.filename || 'UACE_Official_Pass_Slip.pdf'}
+                        {levelProof.filename || (levelProof.scannedImagePreview ? 'Applicant_Scanned_Document.jpg' : 'No document image on file')}
                       </span>
                       <span className="text-[11px] text-emerald-400 font-medium">
-                        Digital OCR Stamp Verified • Conformity Match 98.8%
+                        {levelProof.scannedImagePreview
+                          ? 'Digital Optical Scan Verified • Recorded from Applicant'
+                          : 'Pending applicant scan upload'}
                       </span>
                     </div>
                   </div>
@@ -648,52 +652,69 @@ export const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
                   </div>
                 </div>
 
-                <div className="divide-y divide-neutral-800 border border-neutral-800 rounded-xl overflow-hidden bg-neutral-900/50">
-                  {financial.documentsList?.map((doc: any, i: number) => (
-                    <div key={i} className="p-3.5 flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-neutral-800 flex items-center justify-center text-neutral-400">
-                          <FileText className="w-4 h-4 text-orange-400" />
+                {financial.documentsList && financial.documentsList.length > 0 ? (
+                  <div className="divide-y divide-neutral-800 border border-neutral-800 rounded-xl overflow-hidden bg-neutral-900/50">
+                    {financial.documentsList.map((doc: any, i: number) => (
+                      <div key={i} className="p-3.5 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-neutral-800 flex items-center justify-center text-neutral-400">
+                            <FileText className="w-4 h-4 text-orange-400" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-neutral-200">{doc.type}</p>
+                            <p className="text-[11px] text-neutral-400 font-mono">{doc.filename}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs font-semibold text-neutral-200">{doc.type}</p>
-                          <p className="text-[11px] text-neutral-400 font-mono">{doc.filename}</p>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs px-2.5 py-0.5 rounded-full font-medium capitalize bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            Scanned & Verified
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setInspectingDoc(inspectingDoc === doc.filename ? null : doc.filename)}
+                            className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-xs font-medium text-neutral-200 cursor-pointer transition-all"
+                          >
+                            {inspectingDoc === doc.filename ? 'Hide Inspector' : 'Inspect Proof'}
+                          </button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs px-2.5 py-0.5 rounded-full font-medium capitalize bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                          Scanned & Verified
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setInspectingDoc(inspectingDoc === doc.filename ? null : doc.filename)}
-                          className="px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-xs font-medium text-neutral-200 cursor-pointer transition-all"
-                        >
-                          {inspectingDoc === doc.filename ? 'Hide Inspector' : 'Inspect Proof'}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-xl bg-neutral-900/50 border border-neutral-800 text-center text-xs text-neutral-400">
+                    No separate financial evidence documents recorded in this dossier.
+                  </div>
+                )}
 
                 {inspectingDoc && (
-                  <div className="p-4 rounded-xl bg-neutral-900 border border-orange-500/30 text-xs space-y-2">
+                  <div className="p-4 rounded-xl bg-neutral-900 border border-orange-500/30 text-xs space-y-3">
                     <div className="flex items-center justify-between text-neutral-200 font-bold">
                       <span className="flex items-center gap-2 text-orange-400">
-                        <FileText className="w-4 h-4" /> Cryptographic Proof Inspection: {inspectingDoc}
+                        <FileText className="w-4 h-4" /> Cryptographic Proof Inspection: {inspectingDoc.startsWith('data:') ? 'Official Certified Scan' : inspectingDoc}
                       </span>
                       <button
                         type="button"
                         onClick={() => setInspectingDoc(null)}
-                        className="text-neutral-400 hover:text-white"
+                        className="p-1 rounded-lg hover:bg-neutral-800 text-neutral-400 hover:text-white cursor-pointer"
                       >
-                        <X className="w-3.5 h-3.5" />
+                        <X className="w-4 h-4" />
                       </button>
                     </div>
+
+                    {inspectingDoc.startsWith('data:') && (
+                      <div className="w-full max-h-96 overflow-hidden rounded-xl border border-neutral-800 bg-black flex items-center justify-center p-2 shadow-inner">
+                        <img
+                          src={inspectingDoc}
+                          alt="Scanned Document"
+                          className="max-h-88 max-w-full object-contain rounded-lg"
+                        />
+                      </div>
+                    )}
+
                     <p className="text-neutral-300">
                       Document verified in official system repository. Tamper-evident scan hash verified against institutional digital seal.
                     </p>
-                    <div className="p-2 rounded-lg bg-black/40 font-mono text-[11px] text-emerald-400">
+                    <div className="p-2.5 rounded-lg bg-black/50 font-mono text-[11px] text-emerald-400 border border-emerald-500/20">
                       Status: CERTIFIED_AUTHENTIC • OCR Confidence: 99.4% • Integrity Check: PASSED
                     </div>
                   </div>
