@@ -1,5 +1,5 @@
-import { db } from './index.ts';
-import { users, profiles } from './schema.ts';
+import { db } from './index.js';
+import { users, profiles } from './schema.js';
 import { eq, or } from 'drizzle-orm';
 
 export async function getOrCreateUser(uid: string, email: string, role: string = 'applicant', fullName?: string) {

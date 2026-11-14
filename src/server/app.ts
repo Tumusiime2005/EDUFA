@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
-import { db, ensureDatabaseReady, isDatabaseConfigured } from '../db/index.ts';
-import { users, profiles, notifications, applications } from '../db/schema.ts';
+import { db, ensureDatabaseReady, isDatabaseConfigured } from '../db/index.js';
+import { users, profiles, notifications, applications } from '../db/schema.js';
 import { eq, or } from 'drizzle-orm';
 import {
   createApplicationRecord,
@@ -10,9 +10,9 @@ import {
   submitCommitteeDecision,
   getUserNotifications,
   markNotificationAsRead,
-} from '../db/applications.ts';
-import { getOrCreateUser, getUserWithProfile, registerApplicantUser, loginUser, getAllAdmins } from '../db/users.ts';
-import { calculateFairnessScore, validateNextOfKinNIN } from '../lib/scoring-engine.ts';
+} from '../db/applications.js';
+import { getOrCreateUser, getUserWithProfile, registerApplicantUser, loginUser, getAllAdmins } from '../db/users.js';
+import { calculateFairnessScore, validateNextOfKinNIN } from '../lib/scoring-engine.js';
 import { GoogleGenAI } from '@google/genai';
 
 dotenv.config();
@@ -27,6 +27,26 @@ const ai = new GoogleGenAI({
 });
 
 export const app = express();
+
+// Normalize Vercel rewritten path (/api/index?__vercel_path=...) before Express routing
+app.use((req: Request, _res: Response, next) => {
+  if (req.url && (req.url.includes('__vercel_path=') || req.url.startsWith('/api/index'))) {
+    try {
+      const parsed = new URL(req.url, 'http://localhost');
+      const vPath = parsed.searchParams.get('__vercel_path');
+      if (vPath !== null) {
+        parsed.searchParams.delete('__vercel_path');
+        const qs = parsed.searchParams.toString();
+        const cleanSubPath = vPath.replace(/^\/+/, '');
+        req.url = `/api/${cleanSubPath}${qs ? `?${qs}` : ''}`;
+      } else if (parsed.pathname === '/api/index') {
+        const qs = parsed.searchParams.toString();
+        req.url = `/api${qs ? `?${qs}` : ''}`;
+      }
+    } catch (_) {}
+  }
+  next();
+});
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
