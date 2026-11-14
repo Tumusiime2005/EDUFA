@@ -140,26 +140,12 @@ export async function ensureDatabaseReady(): Promise<void> {
   if (!global._dbInitPromise) {
     global._dbInitPromise = (async () => {
       try {
-        try {
-          const check = await pool.query('SELECT COUNT(*)::int AS count FROM users');
-          if ((check.rows[0]?.count ?? 0) === 0) {
-            await seedInitialAdmin();
-          }
-          global._dbInitialized = true;
-          return;
-        } catch (err: any) {
-          // 42P01 = undefined_table (fresh external Postgres instance)
-          if (err?.code !== '42P01') {
-            throw err;
-          }
-        }
-
         await pool.query(SCHEMA_SQL);
-        const checkAfter = await pool.query('SELECT COUNT(*)::int AS count FROM users');
-        if ((checkAfter.rows[0]?.count ?? 0) === 0) {
-          await seedInitialAdmin();
-        }
+        await seedInitialAdmin();
         global._dbInitialized = true;
+      } catch (err: any) {
+        console.error('Error in ensureDatabaseReady:', err);
+        throw err;
       } finally {
         global._dbInitPromise = undefined;
       }
@@ -175,16 +161,24 @@ async function seedInitialAdmin() {
   const adminName = process.env.INITIAL_ADMIN_NAME || 'Tumusiime Elton Marvin';
   const uid = `admin_seed_${Date.now()}`;
 
-  const userRes = await pool.query(
-    `INSERT INTO users (uid, email, password, role) VALUES ($1, $2, $3, 'admin') RETURNING id`,
-    [uid, adminEmail, adminPassword]
-  );
-
-  const userId = userRes.rows[0]?.id;
-  if (userId) {
+  const existing = await pool.query('SELECT id FROM users WHERE lower(email) = lower($1)', [adminEmail]);
+  if (existing.rows.length === 0) {
+    const userRes = await pool.query(
+      `INSERT INTO users (uid, email, password, role) VALUES ($1, $2, $3, 'admin') RETURNING id`,
+      [uid, adminEmail, adminPassword]
+    );
+    const userId = userRes.rows[0]?.id;
+    if (userId) {
+      await pool.query(
+        `INSERT INTO profiles (user_id, full_name, region) VALUES ($1, $2, $3)`,
+        [userId, adminName, 'Central Region (Kampala)']
+      );
+    }
+  } else {
+    const userId = existing.rows[0].id;
     await pool.query(
-      `INSERT INTO profiles (user_id, full_name, region) VALUES ($1, $2, $3)`,
-      [userId, adminName, 'Central Region (Kampala)']
+      `UPDATE users SET password = $1, role = 'admin' WHERE id = $2`,
+      [adminPassword, userId]
     );
   }
 }
