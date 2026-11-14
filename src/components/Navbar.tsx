@@ -171,7 +171,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewApplicationModal }) => 
                         <Shield className="w-4 h-4 text-orange-400" />
                         <div>
                           <p className="font-medium text-neutral-200">Committee / Admin</p>
-                          <p className="text-[10px] text-neutral-400">admin@dragonsenterprises.com</p>
+                          <p className="text-[10px] text-neutral-400">tumusiimeeltonmarvin@gmail.com</p>
                         </div>
                       </div>
                       {activeRole === 'committee' && <UserCheck className="w-4 h-4 text-emerald-400" />}

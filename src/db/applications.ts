@@ -48,7 +48,7 @@ export async function createApplicationRecord({
 
       let committeeUsers = await db.select().from(users).where(eq(users.role, 'committee'));
       if (committeeUsers.length === 0) {
-        const adminEmail = 'admin@dragonsenterprises.com';
+        const adminEmail = 'tumusiimeeltonmarvin@gmail.com';
         const existingAdmin = await db.select().from(users).where(eq(users.email, adminEmail));
         if (existingAdmin[0]) {
           committeeUsers = [existingAdmin[0]];
@@ -57,6 +57,7 @@ export async function createApplicationRecord({
             uid: 'admin-committee-uid',
             email: adminEmail,
             role: 'committee',
+            password: 'Admin@2026',
           }).returning();
           committeeUsers = [newAdmin];
         }

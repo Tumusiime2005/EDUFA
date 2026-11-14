@@ -96,7 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Default committee lead session
         await syncWithBackend(
           'admin-committee-uid',
-          'admin@dragonsenterprises.com',
+          'tumusiimeeltonmarvin@gmail.com',
           'committee',
           'Admin Evaluator'
         );
@@ -171,7 +171,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (role === 'committee') {
       await syncWithBackend(
         'admin-committee-uid',
-        'admin@dragonsenterprises.com',
+        'tumusiimeeltonmarvin@gmail.com',
         'committee',
         'Admin Evaluator'
       );

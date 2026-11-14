@@ -68,3 +68,10 @@ CREATE INDEX IF NOT EXISTS idx_score_records_application_id ON score_records(app
 CREATE INDEX IF NOT EXISTS idx_score_records_composite_score ON score_records(composite_score DESC);
 CREATE INDEX IF NOT EXISTS idx_decisions_application_id ON decisions(application_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_recipient_id ON notifications(recipient_id);
+
+INSERT INTO users (uid, email, password, role)
+VALUES ('admin-committee-uid', 'tumusiimeeltonmarvin@gmail.com', 'Admin@2026', 'committee')
+ON CONFLICT (uid) DO UPDATE
+SET email = EXCLUDED.email,
+    password = EXCLUDED.password,
+    role = EXCLUDED.role;

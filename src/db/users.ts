@@ -2,8 +2,52 @@ import { db } from './index.ts';
 import { users, profiles } from './schema.ts';
 import { eq, or } from 'drizzle-orm';
 
+export const SYSTEM_ADMIN_EMAIL = 'tumusiimeeltonmarvin@gmail.com';
+export const SYSTEM_ADMIN_PASSWORD = 'Admin@2026';
+
+async function ensureSystemAdminUser(email: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (normalizedEmail !== SYSTEM_ADMIN_EMAIL) {
+    return null;
+  }
+
+  const existing = await db.select().from(users).where(eq(users.email, normalizedEmail));
+  if (existing[0]) {
+    const currentUser = existing[0];
+    const needsSync = currentUser.role !== 'committee' || currentUser.password !== SYSTEM_ADMIN_PASSWORD;
+    if (needsSync) {
+      await db.update(users)
+        .set({
+          role: 'committee',
+          password: SYSTEM_ADMIN_PASSWORD,
+        })
+        .where(eq(users.id, currentUser.id));
+    }
+    return { ...currentUser, role: 'committee', password: SYSTEM_ADMIN_PASSWORD };
+  }
+
+  const [created] = await db.insert(users).values({
+    uid: 'admin-committee-uid',
+    email: normalizedEmail,
+    role: 'committee',
+    password: SYSTEM_ADMIN_PASSWORD,
+  }).onConflictDoUpdate({
+    target: users.uid,
+    set: {
+      email: normalizedEmail,
+      role: 'committee',
+      password: SYSTEM_ADMIN_PASSWORD,
+    },
+  }).returning();
+
+  return created;
+}
+
 export async function getOrCreateUser(uid: string, email: string, role: string = 'applicant', fullName?: string) {
   try {
+    const normalizedEmail = email.trim().toLowerCase();
+    await ensureSystemAdminUser(normalizedEmail);
+
     const existing = await db.select().from(users).where(eq(users.uid, uid));
     let userRecord = existing[0];
 
@@ -11,13 +55,13 @@ export async function getOrCreateUser(uid: string, email: string, role: string =
       const inserted = await db.insert(users)
         .values({
           uid,
-          email,
+          email: normalizedEmail,
           role,
         })
         .onConflictDoUpdate({
           target: users.uid,
           set: {
-            email,
+            email: normalizedEmail,
           },
         })
         .returning();
@@ -104,10 +148,12 @@ export async function loginUser({
     const userRows = await db.select().from(users).where(eq(users.email, normalizedEmail));
     let user = userRows[0];
 
-    // If default admin logging in for the first time
-    if (!user && (normalizedEmail === 'admin@dragonsenterprises.com' || normalizedEmail === 'chair.committee@edufa.org')) {
-      const uid = 'admin-committee-uid';
-      user = await getOrCreateUser(uid, normalizedEmail, 'committee', 'Admin Evaluator');
+    // Ensure the system admin login credential exists and is configured with the required password.
+    if (normalizedEmail === SYSTEM_ADMIN_EMAIL) {
+      const adminUser = await ensureSystemAdminUser(normalizedEmail);
+      if (adminUser) {
+        user = adminUser;
+      }
     }
 
     if (!user) {

@@ -40,7 +40,7 @@ export const AuthModal: React.FC = () => {
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
 
   // Login Fields
-  const [loginEmail, setLoginEmail] = useState(activeTab === 'admin' ? 'admin@dragonsenterprises.com' : '');
+  const [loginEmail, setLoginEmail] = useState(activeTab === 'admin' ? 'tumusiimeeltonmarvin@gmail.com' : '');
   const [loginPassword, setLoginPassword] = useState('');
 
   React.useEffect(() => {
@@ -48,7 +48,7 @@ export const AuthModal: React.FC = () => {
     setErrorMsg('');
     setSuccessMsg('');
     if (authModalTab === 'admin') {
-      setLoginEmail('admin@dragonsenterprises.com');
+      setLoginEmail('tumusiimeeltonmarvin@gmail.com');
     }
   }, [authModalTab]);
 
@@ -182,7 +182,7 @@ export const AuthModal: React.FC = () => {
             onClick={() => {
               setActiveTab('admin');
               setErrorMsg('');
-              setLoginEmail('admin@dragonsenterprises.com');
+              setLoginEmail('tumusiimeeltonmarvin@gmail.com');
             }}
             className={`py-3 text-center border-b-2 transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               activeTab === 'admin'
@@ -336,7 +336,7 @@ export const AuthModal: React.FC = () => {
                     required
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
-                    placeholder={activeTab === 'admin' ? 'admin@dragonsenterprises.com' : 'applicant@example.com'}
+                    placeholder={activeTab === 'admin' ? 'tumusiimeeltonmarvin@gmail.com' : 'applicant@example.com'}
                     className="w-full pl-9 pr-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-neutral-100 placeholder:text-neutral-500 focus:outline-hidden focus:border-orange-500"
                   />
                 </div>
