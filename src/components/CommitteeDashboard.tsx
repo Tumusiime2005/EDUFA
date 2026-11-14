@@ -23,6 +23,7 @@ import { useAuth } from '../context/AuthContext.tsx';
 import { ApplicationDetailModal } from './ApplicationDetailModal.tsx';
 import { UgandaScholarshipLogo } from './UgandaScholarshipLogo.tsx';
 import { AssignAdminModal } from './AssignAdminModal.tsx';
+import { PillarScoreChart } from './PillarScoreChart.tsx';
 
 interface CommitteeDashboardProps {
   applications: any[];
@@ -212,6 +213,24 @@ export const CommitteeDashboard: React.FC<CommitteeDashboardProps> = ({
           <p className="text-[11px] text-neutral-400 mt-1">Require document scrutiny</p>
         </div>
       </div>
+
+      {/* Pillar Score Distribution Chart */}
+      <PillarScoreChart
+        applications={filteredApps}
+        totalCount={applications.length}
+        hasActiveFilters={
+          searchTerm.trim() !== '' ||
+          tierFilter !== 'all' ||
+          statusFilter !== 'all' ||
+          fieldFilter !== 'all'
+        }
+        onResetFilters={() => {
+          setSearchTerm('');
+          setTierFilter('all');
+          setStatusFilter('all');
+          setFieldFilter('all');
+        }}
+      />
 
       {/* Filter and Search Bar */}
       <div className="p-4 rounded-2xl bg-neutral-900/90 border border-neutral-800 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 text-xs">
