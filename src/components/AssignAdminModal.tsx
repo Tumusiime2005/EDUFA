@@ -78,12 +78,12 @@ export const AssignAdminModal: React.FC<AssignAdminModalProps> = ({
       return;
     }
 
-    if (password && password.length < 6) {
-      setErrorMsg('Clearance password must be at least 6 characters long.');
+    if (!password || password.length < 6) {
+      setErrorMsg('Clearance password is required and must be at least 6 characters long.');
       return;
     }
 
-    if (password && password !== confirmPassword) {
+    if (password !== confirmPassword) {
       setErrorMsg('Passwords do not match. Please re-enter.');
       return;
     }

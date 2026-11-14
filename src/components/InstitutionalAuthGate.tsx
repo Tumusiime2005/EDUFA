@@ -11,14 +11,12 @@ import {
   MapPin,
   AlertCircle,
   CheckCircle2,
-  Sparkles,
-  Scale,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { UgandaScholarshipLogo } from './UgandaScholarshipLogo.tsx';
 
 export const InstitutionalAuthGate: React.FC = () => {
-  const { loginUserAccount, registerUserAccount, signInWithGoogle } = useAuth();
+  const { loginUserAccount, registerUserAccount } = useAuth();
   const [activeTab, setActiveTab] = useState<'admin_login' | 'applicant_login' | 'register_applicant'>('admin_login');
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -68,12 +66,12 @@ export const InstitutionalAuthGate: React.FC = () => {
       return;
     }
 
-    if (password && password.length < 6) {
-      setErrorMsg('Password must be at least 6 characters long.');
+    if (!password || password.length < 6) {
+      setErrorMsg('Password is required and must be at least 6 characters long.');
       return;
     }
 
-    if (password && password !== confirmPassword) {
+    if (password !== confirmPassword) {
       setErrorMsg('Passwords do not match. Please re-enter.');
       return;
     }
@@ -224,7 +222,8 @@ export const InstitutionalAuthGate: React.FC = () => {
                     type="password"
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="Enter admin password (optional for demo account)"
+                    placeholder="Enter administrator password"
+                    required
                     className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-neutral-100 placeholder:text-neutral-500 focus:outline-hidden focus:border-amber-500 text-xs"
                   />
                 </div>
@@ -412,16 +411,6 @@ export const InstitutionalAuthGate: React.FC = () => {
               </button>
             </form>
           )}
-
-          <div className="pt-3 border-t border-neutral-800 text-center">
-            <button
-              type="button"
-              onClick={signInWithGoogle}
-              className="text-xs text-neutral-400 hover:text-white transition-colors inline-flex items-center gap-1.5 cursor-pointer font-medium"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-orange-400" /> Or continue with Google Account
-            </button>
-          </div>
         </div>
       </div>
     </div>

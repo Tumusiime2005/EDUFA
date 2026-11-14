@@ -102,13 +102,7 @@ export async function loginUser({
   try {
     const normalizedEmail = email.trim().toLowerCase();
     const userRows = await db.select().from(users).where(eq(users.email, normalizedEmail));
-    let user = userRows[0];
-
-    // If default admin logging in for the first time
-    if (!user && (normalizedEmail === 'admin@dragonsenterprises.com' || normalizedEmail === 'chair.committee@edufa.org')) {
-      const uid = 'admin-committee-uid';
-      user = await getOrCreateUser(uid, normalizedEmail, 'committee', 'Admin Evaluator');
-    }
+    const user = userRows[0];
 
     if (!user) {
       throw new Error('No account found with this email. Please check your credentials or register a new applicant account.');
@@ -124,9 +118,11 @@ export async function loginUser({
       }
     }
 
-    // If password provided and user has a password set, verify
-    if (password && user.password && user.password !== password.trim()) {
-      throw new Error('Invalid password provided. Please check your credentials.');
+    // If user has a password set, strictly verify it
+    if (user.password) {
+      if (!password || user.password !== password.trim()) {
+        throw new Error('Invalid password provided. Please check your credentials.');
+      }
     }
 
     const profileRows = await db.select().from(profiles).where(eq(profiles.userId, user.id));

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { auth, googleAuthProvider } from '../lib/firebase.ts';
-import { signInWithPopup, signOut as fbSignOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { auth } from '../lib/firebase.ts';
+import { signOut as fbSignOut, User as FirebaseUser } from 'firebase/auth';
 
 export interface AppUser {
   id: number;
@@ -30,7 +30,6 @@ interface AuthContextType {
   registerApplicant: (data: { email: string; password?: string; fullName: string; phone?: string; region?: string }) => Promise<void>;
   registerUserAccount: (data: { email: string; password?: string; fullName: string; phone?: string; region?: string; role?: 'applicant' | 'committee' }) => Promise<void>;
   loginUserAccount: (email: string, password?: string, expectedRole?: 'applicant' | 'committee') => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
   switchDemoUser: (role: 'applicant' | 'committee') => Promise<void>;
   signOut: () => Promise<void>;
   refreshUserData: () => Promise<void>;
@@ -38,7 +37,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const LOCAL_STORAGE_KEY = 'edufa_user_session_v5';
+const LOCAL_STORAGE_KEY = 'edufa_user_session_v6';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
@@ -91,6 +90,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    // Clear legacy session keys and any prior Firebase Google auth session
+    try {
+      localStorage.removeItem('edufa_user_session_v5');
+      fbSignOut(auth).catch(() => {});
+    } catch (_) {}
+
     // Check saved session & verify existence in database
     const verifySaved = async () => {
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -121,16 +126,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     verifySaved();
-
-    // Listen for Firebase Auth changes
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      setFirebaseUser(fbUser);
-      if (fbUser && fbUser.email) {
-        await syncWithBackend(fbUser.uid, fbUser.email, 'applicant', fbUser.displayName || undefined);
-      }
-    });
-
-    return () => unsubscribe();
   }, []);
 
   const registerUserAccount = async (data: {
@@ -183,20 +178,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setActiveRole(role);
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(responseData.user));
       setIsAuthModalOpen(false);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const signInWithGoogle = async () => {
-    try {
-      setLoading(true);
-      const cred = await signInWithPopup(auth, googleAuthProvider);
-      if (cred.user && cred.user.email) {
-        await syncWithBackend(cred.user.uid, cred.user.email, 'applicant', cred.user.displayName || undefined);
-      }
-    } catch (err) {
-      console.error('Google Sign In error:', err);
     } finally {
       setLoading(false);
     }
@@ -263,7 +244,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         registerApplicant,
         registerUserAccount,
         loginUserAccount,
-        signInWithGoogle,
         switchDemoUser,
         signOut,
         refreshUserData,

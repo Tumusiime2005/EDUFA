@@ -5,7 +5,6 @@ import {
   LogIn,
   Shield,
   GraduationCap,
-  Sparkles,
   Lock,
   Mail,
   User,
@@ -25,7 +24,6 @@ export const AuthModal: React.FC = () => {
     currentUser,
     registerUserAccount,
     loginUserAccount,
-    signInWithGoogle,
   } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'login' | 'register' | 'admin'>(authModalTab);
@@ -69,12 +67,12 @@ export const AuthModal: React.FC = () => {
       return;
     }
 
-    if (regPassword && regPassword.length < 6) {
-      setErrorMsg('Password must be at least 6 characters.');
+    if (!regPassword || regPassword.length < 6) {
+      setErrorMsg('Password is required and must be at least 6 characters.');
       return;
     }
 
-    if (regPassword && regPassword !== regConfirmPassword) {
+    if (regPassword !== regConfirmPassword) {
       setErrorMsg('Passwords do not match. Please re-enter.');
       return;
     }
@@ -401,16 +399,6 @@ export const AuthModal: React.FC = () => {
               </button>
             </form>
           )}
-
-          <div className="pt-3 border-t border-neutral-800 text-center">
-            <button
-              type="button"
-              onClick={signInWithGoogle}
-              className="text-xs text-neutral-400 hover:text-white transition-colors inline-flex items-center gap-1.5 cursor-pointer font-medium"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-orange-400" /> Or continue with Google Account
-            </button>
-          </div>
         </div>
       </div>
     </div>
