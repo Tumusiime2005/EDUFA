@@ -1,6 +1,6 @@
 import { db } from './index.js';
 import { users, profiles } from './schema.js';
-import { eq, or } from 'drizzle-orm';
+import { eq, or, sql } from 'drizzle-orm';
 
 export async function getOrCreateUser(uid: string, email: string, role: string = 'applicant', fullName?: string) {
   try {
@@ -60,7 +60,10 @@ export async function registerApplicantUser({
 }) {
   try {
     const normalizedEmail = email.trim().toLowerCase();
-    const existing = await db.select().from(users).where(eq(users.email, normalizedEmail));
+    const existing = await db
+      .select()
+      .from(users)
+      .where(sql`lower(${users.email}) = ${normalizedEmail}`);
     if (existing[0]) {
       throw new Error('An account with this email address already exists. Please log in.');
     }
@@ -101,7 +104,10 @@ export async function loginUser({
 }) {
   try {
     const normalizedEmail = email.trim().toLowerCase();
-    const userRows = await db.select().from(users).where(eq(users.email, normalizedEmail));
+    const userRows = await db
+      .select()
+      .from(users)
+      .where(sql`lower(${users.email}) = ${normalizedEmail}`);
     const user = userRows[0];
 
     if (!user) {
@@ -118,10 +124,10 @@ export async function loginUser({
       }
     }
 
-    // If user has a password set, strictly verify it
+    // Strictly verify password
     if (user.password) {
       if (!password || user.password !== password.trim()) {
-        throw new Error('Invalid password provided. Please check your credentials.');
+        throw new Error('Wrong password. Please check your password and try again.');
       }
     }
 

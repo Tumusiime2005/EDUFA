@@ -42,7 +42,7 @@ app.use((req: Request, _res: Response, next) => {
         const qs = parsed.searchParams.toString();
         const cleanSubPath = vPath.replace(/^\/+/, '');
         req.url = `${cleanSubPath ? `/api/${cleanSubPath}` : '/api'}${qs ? `?${qs}` : ''}`;
-      } else if (parsed.pathname === '/api/index') {
+      } else if (parsed.pathname === '/api/index' || parsed.pathname === '/api/index.js') {
         const qs = parsed.searchParams.toString();
         req.url = `/api${qs ? `?${qs}` : ''}`;
       }

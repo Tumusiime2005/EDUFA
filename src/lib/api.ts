@@ -7,6 +7,31 @@ export function apiUrl(path: string): string {
   return `${API_BASE_URL}${path}`;
 }
 
+export async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  timeoutMs = 12000
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+  } catch (err: any) {
+    if (err?.name === 'AbortError') {
+      throw new Error(
+        'Verification timed out waiting for the server. Please check your connection and try again.'
+      );
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export async function parseApiResponse<T = any>(res: Response): Promise<T> {
   const contentType = res.headers.get('content-type') || '';
   const rawText = await res.text();
