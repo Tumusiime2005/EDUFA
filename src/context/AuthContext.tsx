@@ -137,25 +137,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     region?: string;
     role?: 'applicant' | 'committee';
   }) => {
-    setLoading(true);
-    try {
-      const res = await fetch(apiUrl('/api/auth/register'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      const responseData = await parseApiResponse(res);
-      if (!res.ok) {
-        throw new Error(responseData.error || 'Failed to create account');
-      }
-      setCurrentUser(responseData.user);
-      const role = responseData.user.role === 'committee' || responseData.user.role === 'admin' ? 'committee' : 'applicant';
-      setActiveRole(role);
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(responseData.user));
-      setIsAuthModalOpen(false);
-    } finally {
-      setLoading(false);
+    const res = await fetch(apiUrl('/api/auth/register'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const responseData = await parseApiResponse(res);
+    if (!res.ok) {
+      throw new Error(responseData.error || 'Failed to create account');
     }
+    setCurrentUser(responseData.user);
+    const role = responseData.user.role === 'committee' || responseData.user.role === 'admin' ? 'committee' : 'applicant';
+    setActiveRoleState(role);
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(responseData.user));
+    setIsAuthModalOpen(false);
   };
 
   const registerApplicant = async (data: { email: string; password?: string; fullName: string; phone?: string; region?: string }) => {
@@ -163,25 +158,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loginUserAccount = async (email: string, password?: string, expectedRole?: 'applicant' | 'committee') => {
-    setLoading(true);
-    try {
-      const res = await fetch(apiUrl('/api/auth/login'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, expectedRole }),
-      });
-      const responseData = await parseApiResponse(res);
-      if (!res.ok) {
-        throw new Error(responseData.error || 'Login failed');
-      }
-      setCurrentUser(responseData.user);
-      const role = responseData.user.role === 'committee' || responseData.user.role === 'admin' ? 'committee' : 'applicant';
-      setActiveRole(role);
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(responseData.user));
-      setIsAuthModalOpen(false);
-    } finally {
-      setLoading(false);
+    const res = await fetch(apiUrl('/api/auth/login'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, expectedRole }),
+    });
+    const responseData = await parseApiResponse(res);
+    if (!res.ok) {
+      throw new Error(responseData.error || 'Login failed');
     }
+    setCurrentUser(responseData.user);
+    const role = responseData.user.role === 'committee' || responseData.user.role === 'admin' ? 'committee' : 'applicant';
+    setActiveRoleState(role);
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(responseData.user));
+    setIsAuthModalOpen(false);
   };
 
   const switchDemoUser = async (role: 'applicant' | 'committee') => {
