@@ -17,14 +17,17 @@ import { GoogleGenAI } from '@google/genai';
 
 dotenv.config();
 
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  httpOptions: {
-    headers: {
-      'User-Agent': 'aistudio-build',
+function getAiClient(): GoogleGenAI | null {
+  if (!process.env.GEMINI_API_KEY) return null;
+  return new GoogleGenAI({
+    apiKey: process.env.GEMINI_API_KEY,
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build',
+      },
     },
-  },
-});
+  });
+}
 
 export const app = express();
 
@@ -38,7 +41,7 @@ app.use((req: Request, _res: Response, next) => {
         parsed.searchParams.delete('__vercel_path');
         const qs = parsed.searchParams.toString();
         const cleanSubPath = vPath.replace(/^\/+/, '');
-        req.url = `/api/${cleanSubPath}${qs ? `?${qs}` : ''}`;
+        req.url = `${cleanSubPath ? `/api/${cleanSubPath}` : '/api'}${qs ? `?${qs}` : ''}`;
       } else if (parsed.pathname === '/api/index') {
         const qs = parsed.searchParams.toString();
         req.url = `/api${qs ? `?${qs}` : ''}`;
@@ -267,7 +270,8 @@ Return ONLY a valid JSON object matching this schema (no markdown, no backticks)
 }`;
 
     try {
-      if (cleanBase64 && cleanBase64.length > 500 && process.env.GEMINI_API_KEY) {
+      const ai = getAiClient();
+      if (cleanBase64 && cleanBase64.length > 500 && ai) {
         const timeoutPromise = new Promise<null>((_, reject) =>
           setTimeout(() => reject(new Error('AI OCR timeout')), 40000)
         );
