@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { auth } from '../lib/firebase.ts';
 import { signOut as fbSignOut, User as FirebaseUser } from 'firebase/auth';
+import { apiUrl, parseApiResponse } from '../lib/api.ts';
 
 export interface AppUser {
   id: number;
@@ -69,13 +70,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const syncWithBackend = async (uid: string, email: string, role: string, fullName?: string) => {
     try {
-      const res = await fetch('/api/auth/sync', {
+      const res = await fetch(apiUrl('/api/auth/sync'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ uid, email, role, fullName }),
       });
       if (res.ok) {
-        const data = await res.json();
+        const data = await parseApiResponse(res);
         setCurrentUser(data.user);
         setActiveRoleState(data.user.role === 'committee' || data.user.role === 'admin' ? 'committee' : 'applicant');
         try {
@@ -102,9 +103,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (saved) {
         try {
           const parsed: AppUser = JSON.parse(saved);
-          const verifyRes = await fetch(`/api/auth/verify?id=${parsed.id}`);
+          const verifyRes = await fetch(apiUrl(`/api/auth/verify?id=${parsed.id}`));
           if (verifyRes.ok) {
-            const data = await verifyRes.json();
+            const data = await parseApiResponse(verifyRes);
             setCurrentUser(data.user);
             setActiveRoleState(data.user.role === 'committee' || data.user.role === 'admin' ? 'committee' : 'applicant');
           } else {
@@ -138,12 +139,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }) => {
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/register', {
+      const res = await fetch(apiUrl('/api/auth/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       });
-      const responseData = await res.json();
+      const responseData = await parseApiResponse(res);
       if (!res.ok) {
         throw new Error(responseData.error || 'Failed to create account');
       }
@@ -164,12 +165,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginUserAccount = async (email: string, password?: string, expectedRole?: 'applicant' | 'committee') => {
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(apiUrl('/api/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, expectedRole }),
       });
-      const responseData = await res.json();
+      const responseData = await parseApiResponse(res);
       if (!res.ok) {
         throw new Error(responseData.error || 'Login failed');
       }

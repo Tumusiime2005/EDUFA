@@ -41,6 +41,7 @@ import {
 } from '../lib/scoring-engine.ts';
 import { DocumentScannerModal } from './DocumentScannerModal.tsx';
 import { UgandaScholarshipLogo } from './UgandaScholarshipLogo.tsx';
+import { apiUrl, parseApiResponse } from '../lib/api.ts';
 
 interface NewApplicationModalProps {
   isOpen: boolean;
@@ -384,7 +385,7 @@ export const NewApplicationModal: React.FC<NewApplicationModalProps> = ({
         levelCompletionProof,
       };
 
-      const res = await fetch('/api/applications', {
+      const res = await fetch(apiUrl('/api/applications'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -399,15 +400,7 @@ export const NewApplicationModal: React.FC<NewApplicationModalProps> = ({
         }),
       });
 
-      const responseText = await res.text();
-      let responseData: any = {};
-      try {
-        responseData = JSON.parse(responseText);
-      } catch {
-        if (!res.ok) {
-          throw new Error(responseText.slice(0, 180) || `Server error (${res.status})`);
-        }
-      }
+      const responseData = await parseApiResponse(res);
 
       if (!res.ok) {
         throw new Error(responseData.error || `Server submission error (${res.status})`);
