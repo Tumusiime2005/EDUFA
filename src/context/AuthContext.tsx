@@ -206,16 +206,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     if (role === 'committee') {
       await syncWithBackend(
-        'admin-committee-uid',
-        'admin@dragonsenterprises.com',
-        'committee',
-        'Admin Evaluator'
+        'admin_tumusiime_uid',
+        'tumusiimeeltonmarvin@gmail.com',
+        'admin',
+        'Elton Marvin Tumusiime'
       );
       setActiveRole('committee');
     } else {
       await syncWithBackend(
         'applicant-user-uid',
-        'applicant@dragonsenterprises.com',
+        'applicant@edufa.org',
         'applicant',
         'Applicant'
       );

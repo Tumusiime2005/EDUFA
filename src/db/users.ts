@@ -105,9 +105,20 @@ export async function loginUser({
     let user = userRows[0];
 
     // If default admin logging in for the first time
-    if (!user && (normalizedEmail === 'admin@dragonsenterprises.com' || normalizedEmail === 'chair.committee@edufa.org')) {
-      const uid = 'admin-committee-uid';
-      user = await getOrCreateUser(uid, normalizedEmail, 'committee', 'Admin Evaluator');
+    if (!user && normalizedEmail === 'tumusiimeeltonmarvin@gmail.com') {
+      const uid = 'admin_tumusiime_uid';
+      const [newUser] = await db.insert(users).values({
+        uid,
+        email: normalizedEmail,
+        password: 'Admin@2026',
+        role: 'admin',
+      }).returning();
+      await db.insert(profiles).values({
+        userId: newUser.id,
+        fullName: 'Elton Marvin Tumusiime',
+        region: 'National',
+      });
+      user = newUser;
     }
 
     if (!user) {

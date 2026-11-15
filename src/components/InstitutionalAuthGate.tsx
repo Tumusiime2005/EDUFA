@@ -210,7 +210,7 @@ export const InstitutionalAuthGate: React.FC = () => {
                     required
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
-                    placeholder="e.g. admin@dragonsenterprises.com"
+                    placeholder="e.g. tumusiimeeltonmarvin@gmail.com"
                     className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-neutral-100 placeholder:text-neutral-500 focus:outline-hidden focus:border-amber-500 text-xs"
                   />
                 </div>

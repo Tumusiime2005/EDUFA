@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { UgandaScholarshipLogo } from './UgandaScholarshipLogo.tsx';
+import { apiUrl, parseApiResponse } from '../lib/api.ts';
 
 interface ApplicationDetailModalProps {
   application: any | null;
@@ -90,7 +91,7 @@ export const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
 
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/applications/${application.id}/decision`, {
+      const res = await fetch(apiUrl(`/api/applications/${application.id}/decision`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -101,7 +102,7 @@ export const ApplicationDetailModal: React.FC<ApplicationDetailModalProps> = ({
       });
 
       if (!res.ok) {
-        const data = await res.json();
+        const data = await parseApiResponse(res);
         throw new Error(data.error || 'Failed to submit decision');
       }
 
