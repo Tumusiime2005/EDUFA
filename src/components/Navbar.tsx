@@ -28,6 +28,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenNewApplicationModal }) => 
     setActiveRole,
     anonymizedMode,
     setAnonymizedMode,
+    signInWithGoogle,
     switchDemoUser,
     signOut,
     openAuthModal,

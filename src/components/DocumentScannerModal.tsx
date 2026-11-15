@@ -17,7 +17,6 @@ import {
   FileCheck2,
 } from 'lucide-react';
 import { UgandaScholarshipLogo } from './UgandaScholarshipLogo.tsx';
-import { apiUrl, parseApiResponse } from '../lib/api.ts';
 
 interface DocumentScannerModalProps {
   isOpen: boolean;
@@ -241,7 +240,7 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
       }, 1800);
 
       // Execute AI OCR call on backend
-      const res = await fetch(apiUrl('/api/scan-document'), {
+      const res = await fetch('/api/scan-document', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -257,7 +256,7 @@ export const DocumentScannerModal: React.FC<DocumentScannerModalProps> = ({
       clearTimeout(progressTimer1);
       clearTimeout(progressTimer2);
 
-      const data = await parseApiResponse(res);
+      const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || 'Optical scan failed');
       }

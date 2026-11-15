@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { auth } from '../lib/firebase.ts';
-import { signOut as fbSignOut, User as FirebaseUser } from 'firebase/auth';
-import { apiUrl, parseApiResponse } from '../lib/api.ts';
+import { auth, googleAuthProvider } from '../lib/firebase.ts';
+import { signInWithPopup, signOut as fbSignOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 
 export interface AppUser {
   id: number;
@@ -31,6 +30,7 @@ interface AuthContextType {
   registerApplicant: (data: { email: string; password?: string; fullName: string; phone?: string; region?: string }) => Promise<void>;
   registerUserAccount: (data: { email: string; password?: string; fullName: string; phone?: string; region?: string; role?: 'applicant' | 'committee' }) => Promise<void>;
   loginUserAccount: (email: string, password?: string, expectedRole?: 'applicant' | 'committee') => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   switchDemoUser: (role: 'applicant' | 'committee') => Promise<void>;
   signOut: () => Promise<void>;
   refreshUserData: () => Promise<void>;
@@ -38,7 +38,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const LOCAL_STORAGE_KEY = 'edufa_user_session_v6';
+const LOCAL_STORAGE_KEY = 'edufa_user_session_v5';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
@@ -70,13 +70,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const syncWithBackend = async (uid: string, email: string, role: string, fullName?: string) => {
     try {
-      const res = await fetch(apiUrl('/api/auth/sync'), {
+      const res = await fetch('/api/auth/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ uid, email, role, fullName }),
       });
       if (res.ok) {
-        const data = await parseApiResponse(res);
+        const data = await res.json();
         setCurrentUser(data.user);
         setActiveRoleState(data.user.role === 'committee' || data.user.role === 'admin' ? 'committee' : 'applicant');
         try {
@@ -91,21 +91,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Clear legacy session keys and any prior Firebase Google auth session
-    try {
-      localStorage.removeItem('edufa_user_session_v5');
-      fbSignOut(auth).catch(() => {});
-    } catch (_) {}
-
     // Check saved session & verify existence in database
     const verifySaved = async () => {
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (saved) {
         try {
           const parsed: AppUser = JSON.parse(saved);
-          const verifyRes = await fetch(apiUrl(`/api/auth/verify?id=${parsed.id}`));
+          const verifyRes = await fetch(`/api/auth/verify?id=${parsed.id}`);
           if (verifyRes.ok) {
-            const data = await parseApiResponse(verifyRes);
+            const data = await verifyRes.json();
             setCurrentUser(data.user);
             setActiveRoleState(data.user.role === 'committee' || data.user.role === 'admin' ? 'committee' : 'applicant');
           } else {
@@ -127,6 +121,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     verifySaved();
+
+    // Listen for Firebase Auth changes
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      setFirebaseUser(fbUser);
+      if (fbUser && fbUser.email) {
+        await syncWithBackend(fbUser.uid, fbUser.email, 'applicant', fbUser.displayName || undefined);
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const registerUserAccount = async (data: {
@@ -137,20 +141,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     region?: string;
     role?: 'applicant' | 'committee';
   }) => {
-    const res = await fetch(apiUrl('/api/auth/register'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    const responseData = await parseApiResponse(res);
-    if (!res.ok) {
-      throw new Error(responseData.error || 'Failed to create account');
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const responseData = await res.json();
+      if (!res.ok) {
+        throw new Error(responseData.error || 'Failed to create account');
+      }
+      setCurrentUser(responseData.user);
+      const role = responseData.user.role === 'committee' || responseData.user.role === 'admin' ? 'committee' : 'applicant';
+      setActiveRole(role);
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(responseData.user));
+      setIsAuthModalOpen(false);
+    } finally {
+      setLoading(false);
     }
-    setCurrentUser(responseData.user);
-    const role = responseData.user.role === 'committee' || responseData.user.role === 'admin' ? 'committee' : 'applicant';
-    setActiveRoleState(role);
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(responseData.user));
-    setIsAuthModalOpen(false);
   };
 
   const registerApplicant = async (data: { email: string; password?: string; fullName: string; phone?: string; region?: string }) => {
@@ -158,20 +167,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loginUserAccount = async (email: string, password?: string, expectedRole?: 'applicant' | 'committee') => {
-    const res = await fetch(apiUrl('/api/auth/login'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, expectedRole }),
-    });
-    const responseData = await parseApiResponse(res);
-    if (!res.ok) {
-      throw new Error(responseData.error || 'Login failed');
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, expectedRole }),
+      });
+      const responseData = await res.json();
+      if (!res.ok) {
+        throw new Error(responseData.error || 'Login failed');
+      }
+      setCurrentUser(responseData.user);
+      const role = responseData.user.role === 'committee' || responseData.user.role === 'admin' ? 'committee' : 'applicant';
+      setActiveRole(role);
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(responseData.user));
+      setIsAuthModalOpen(false);
+    } finally {
+      setLoading(false);
     }
-    setCurrentUser(responseData.user);
-    const role = responseData.user.role === 'committee' || responseData.user.role === 'admin' ? 'committee' : 'applicant';
-    setActiveRoleState(role);
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(responseData.user));
-    setIsAuthModalOpen(false);
+  };
+
+  const signInWithGoogle = async () => {
+    try {
+      setLoading(true);
+      const cred = await signInWithPopup(auth, googleAuthProvider);
+      if (cred.user && cred.user.email) {
+        await syncWithBackend(cred.user.uid, cred.user.email, 'applicant', cred.user.displayName || undefined);
+      }
+    } catch (err) {
+      console.error('Google Sign In error:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const switchDemoUser = async (role: 'applicant' | 'committee') => {
@@ -235,6 +263,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         registerApplicant,
         registerUserAccount,
         loginUserAccount,
+        signInWithGoogle,
         switchDemoUser,
         signOut,
         refreshUserData,

@@ -16,7 +16,6 @@ import {
   KeyRound,
 } from 'lucide-react';
 import { UgandaScholarshipLogo } from './UgandaScholarshipLogo.tsx';
-import { apiUrl, parseApiResponse } from '../lib/api.ts';
 
 interface AssignAdminModalProps {
   isOpen: boolean;
@@ -47,9 +46,9 @@ export const AssignAdminModal: React.FC<AssignAdminModalProps> = ({
   const fetchAdmins = async () => {
     try {
       setLoadingAdmins(true);
-      const res = await fetch(apiUrl('/api/admin/admins'));
+      const res = await fetch('/api/admin/admins');
       if (res.ok) {
-        const data = await parseApiResponse(res);
+        const data = await res.json();
         setAdmins(data);
       }
     } catch (err) {
@@ -79,19 +78,19 @@ export const AssignAdminModal: React.FC<AssignAdminModalProps> = ({
       return;
     }
 
-    if (!password || password.length < 6) {
-      setErrorMsg('Clearance password is required and must be at least 6 characters long.');
+    if (password && password.length < 6) {
+      setErrorMsg('Clearance password must be at least 6 characters long.');
       return;
     }
 
-    if (password !== confirmPassword) {
+    if (password && password !== confirmPassword) {
       setErrorMsg('Passwords do not match. Please re-enter.');
       return;
     }
 
     setSubmitting(true);
     try {
-      const res = await fetch(apiUrl('/api/admin/assign'), {
+      const res = await fetch('/api/admin/assign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -103,7 +102,7 @@ export const AssignAdminModal: React.FC<AssignAdminModalProps> = ({
         }),
       });
 
-      const data = await parseApiResponse(res);
+      const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || 'Failed to assign administrator');
       }

@@ -22,7 +22,6 @@ import {
 import { useAuth } from '../context/AuthContext.tsx';
 import { ApplicationDetailModal } from './ApplicationDetailModal.tsx';
 import { UgandaScholarshipLogo } from './UgandaScholarshipLogo.tsx';
-import { apiUrl, parseApiResponse } from '../lib/api.ts';
 
 interface ApplicantPortalProps {
   applications: any[];
@@ -61,9 +60,9 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({
     if (!currentUser) return;
     try {
       setLoadingFeedbacks(true);
-      const res = await fetch(apiUrl(`/api/notifications?userId=${currentUser.id}`));
+      const res = await fetch(`/api/notifications?userId=${currentUser.id}`);
       if (res.ok) {
-        const data = await parseApiResponse(res);
+        const data = await res.json();
         setFeedbacks(data);
       }
     } catch (err) {
@@ -85,7 +84,7 @@ export const ApplicantPortal: React.FC<ApplicantPortalProps> = ({
 
     setReplySubmitting(true);
     try {
-      const res = await fetch(apiUrl(`/api/applications/${activeApp.id}/clarification`), {
+      const res = await fetch(`/api/applications/${activeApp.id}/clarification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

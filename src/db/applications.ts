@@ -1,7 +1,7 @@
-import { db } from './index.js';
-import { applications, scoreRecords, decisions, notifications, users, profiles } from './schema.js';
+import { db } from './index.ts';
+import { applications, scoreRecords, decisions, notifications, users, profiles } from './schema.ts';
 import { eq, desc, or } from 'drizzle-orm';
-import { calculateFairnessScore, FinancialData, AcademicData, AlignmentData, FundingScopeData } from '../lib/scoring-engine.js';
+import { calculateFairnessScore, FinancialData, AcademicData, AlignmentData, FundingScopeData } from '../lib/scoring-engine.ts';
 
 export async function createApplicationRecord({
   applicantId,

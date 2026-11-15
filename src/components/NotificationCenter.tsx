@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, Check, Clock, Info, ShieldAlert, Award, FileQuestion } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.tsx';
-import { apiUrl, parseApiResponse } from '../lib/api.ts';
 
 interface NotificationItem {
   id: number;
@@ -21,9 +20,9 @@ export const NotificationCenter: React.FC = () => {
   const fetchNotifications = async () => {
     if (!currentUser) return;
     try {
-      const res = await fetch(apiUrl(`/api/notifications?userId=${currentUser.id}`));
+      const res = await fetch(`/api/notifications?userId=${currentUser.id}`);
       if (res.ok) {
-        const data = await parseApiResponse(res);
+        const data = await res.json();
         setNotifications(data);
       }
     } catch (err) {
@@ -39,7 +38,7 @@ export const NotificationCenter: React.FC = () => {
 
   const markAsRead = async (id: number) => {
     try {
-      await fetch(apiUrl(`/api/notifications/${id}/read`), { method: 'POST' });
+      await fetch(`/api/notifications/${id}/read`, { method: 'POST' });
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
       );

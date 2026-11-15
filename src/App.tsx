@@ -6,7 +6,6 @@ import { ApplicantPortal } from './components/ApplicantPortal.tsx';
 import { NewApplicationModal } from './components/NewApplicationModal.tsx';
 import { AuthModal } from './components/AuthModal.tsx';
 import { InstitutionalAuthGate } from './components/InstitutionalAuthGate.tsx';
-import { apiUrl, parseApiResponse } from './lib/api.ts';
 import { Scale, Shield, GraduationCap, Sparkles, RefreshCw, Database } from 'lucide-react';
 
 function MainApp() {
@@ -18,9 +17,9 @@ function MainApp() {
   const fetchApplications = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(apiUrl('/api/applications'));
+      const res = await fetch('/api/applications');
       if (res.ok) {
-        const data = await parseApiResponse(res);
+        const data = await res.json();
         setApplications(data);
       }
     } catch (err) {
